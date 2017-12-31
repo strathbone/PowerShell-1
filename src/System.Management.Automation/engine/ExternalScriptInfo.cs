@@ -11,11 +11,6 @@ using System.Collections.Generic;
 using System.Management.Automation.Language;
 using System.Management.Automation.Security;
 
-#if CORECLR
-// Use stub for SerializableAttribute
-using Microsoft.PowerShell.CoreClr.Stubs;
-#endif
-
 namespace System.Management.Automation
 {
     /// <summary>
@@ -29,27 +24,27 @@ namespace System.Management.Automation
         /// <summary>
         /// Creates an instance of the ExternalScriptInfo class with the specified name, and path.
         /// </summary>
-        /// 
+        ///
         /// <param name="name">
         /// The name of the script.
         /// </param>
-        /// 
+        ///
         /// <param name="path">
         /// The path to the script
         /// </param>
-        /// 
+        ///
         /// <param name="context">
         /// The context of the currently running engine.
         /// </param>
-        /// 
+        ///
         /// <exception cref="ArgumentNullException">
         /// If <paramref name="context"/> is null.
         /// </exception>
-        /// 
+        ///
         /// <exception cref="ArgumentException">
         /// If <paramref name="path"/> is null or empty.
         /// </exception>
-        /// 
+        ///
         internal ExternalScriptInfo(string name, string path, ExecutionContext context)
             : base(name, CommandTypes.ExternalScript, context)
         {
@@ -72,15 +67,15 @@ namespace System.Management.Automation
         /// <param name="name">
         /// The name of the script.
         /// </param>
-        /// 
+        ///
         /// <param name="path">
         /// The path to the script
         /// </param>
-        /// 
+        ///
         /// <exception cref="ArgumentException">
         /// If <paramref name="path"/> is null or empty.
         /// </exception>
-        /// 
+        ///
         internal ExternalScriptInfo(string name, string path) : base(name, CommandTypes.ExternalScript)
         {
             if (String.IsNullOrEmpty(path))
@@ -211,7 +206,7 @@ namespace System.Management.Automation
         /// <summary>
         /// The script block that represents the external script
         /// </summary>
-        /// 
+        ///
         public ScriptBlock ScriptBlock
         {
             get
@@ -273,9 +268,9 @@ namespace System.Management.Automation
         /// <summary>
         /// Validates the external script info
         /// </summary>
-        /// 
+        ///
         /// <param name="host"></param>
-        /// 
+        ///
         public void ValidateScriptInfo(Host.PSHost host)
         {
             if (!_signatureChecked)
@@ -352,7 +347,7 @@ namespace System.Management.Automation
             }
         }
 
-        #endregion Internal 
+        #endregion Internal
 
         private ScriptRequirements GetRequiresData()
         {
@@ -519,7 +514,7 @@ namespace System.Management.Automation
                 catch (UnauthorizedAccessException e)
                 {
                     // this is unadvertised exception thrown by the StreamReader ctor when
-                    // no permission to read the script file 
+                    // no permission to read the script file
                     ThrowCommandNotFoundException(e);
                 }
             }

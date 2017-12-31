@@ -8,15 +8,11 @@
  * like Exchange.
  */
 
+using System;
 using System.Security.Principal;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Serialization;
 using Microsoft.PowerShell;
-
-#if CORECLR
-// Use stub for SerializableAttribute, SerializationInfo and ISerializable related types.
-using Microsoft.PowerShell.CoreClr.Stubs;
-#endif
 
 namespace System.Management.Automation.Remoting
 {
@@ -87,9 +83,7 @@ namespace System.Management.Automation.Remoting
                 ConnectionString = senderInfo.ConnectionString;
                 _applicationArguments = senderInfo._applicationArguments;
 
-#if !CORECLR // TimeZone Not In CoreCLR
-                this.clientTimeZone = senderInfo.ClientTimeZone;
-#endif
+                ClientTimeZone = senderInfo.ClientTimeZone;
             }
             catch (Exception)
             {
@@ -131,17 +125,14 @@ namespace System.Management.Automation.Remoting
             // cmdlets/scripts a chance to modify these.
         }
 
-#if !CORECLR // TimeZone Not In CoreCLR
         /// <summary>
         /// Contains the TimeZone information from the client machine.
         /// </summary>
-        public TimeZone ClientTimeZone
+        public TimeZoneInfo ClientTimeZone
         {
-            get { return clientTimeZone; }
-            internal set { clientTimeZone = value; }
+            get;
+            internal set;
         }
-        private TimeZone clientTimeZone;
-#endif
 
         /// <summary>
         /// Connection string used by the client to connect to the server. This is
@@ -161,6 +152,11 @@ namespace System.Management.Automation.Remoting
             get { return _applicationArguments; }
             internal set { _applicationArguments = value; }
         }
+
+        /// <summary>
+        /// "ConfigurationName" from the sever remote session
+        /// </summary>
+        public string ConfigurationName { get; internal set; }
 
         #endregion
     }
@@ -278,9 +274,9 @@ namespace System.Management.Automation.Remoting
         /// Gets the type of authentication used.
         /// For a WSMan service authenticated user this will be one of the following:
         ///  WSMAN_DEFAULT_AUTHENTICATION
-        ///  WSMAN_NO_AUTHENTICATION 
-        ///  WSMAN_AUTH_DIGEST           
-        ///  WSMAN_AUTH_NEGOTIATE 
+        ///  WSMAN_NO_AUTHENTICATION
+        ///  WSMAN_AUTH_DIGEST
+        ///  WSMAN_AUTH_NEGOTIATE
         ///  WSMAN_AUTH_BASIC
         ///  WSMAN_AUTH_KERBEROS
         ///  WSMAN_AUTH_CLIENT_CERTIFICATE
@@ -312,9 +308,9 @@ namespace System.Management.Automation.Remoting
         /// Type of authentication used to authenticate this user.
         /// For a WSMan service authenticated user this will be one of the following:
         ///  WSMAN_DEFAULT_AUTHENTICATION
-        ///  WSMAN_NO_AUTHENTICATION 
-        ///  WSMAN_AUTH_DIGEST           
-        ///  WSMAN_AUTH_NEGOTIATE 
+        ///  WSMAN_NO_AUTHENTICATION
+        ///  WSMAN_AUTH_DIGEST
+        ///  WSMAN_AUTH_NEGOTIATE
         ///  WSMAN_AUTH_BASIC
         ///  WSMAN_AUTH_KERBEROS
         ///  WSMAN_AUTH_CLIENT_CERTIFICATE

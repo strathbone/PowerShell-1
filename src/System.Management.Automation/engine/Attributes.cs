@@ -4,12 +4,15 @@ Copyright (c) Microsoft Corporation.  All rights reserved.
 
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using System.Globalization;
 using System.Management.Automation.Internal;
 using System.Diagnostics.CodeAnalysis;
 using System.Management.Automation.Language;
 using System.Runtime.CompilerServices;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace System.Management.Automation.Internal
 {
@@ -90,18 +93,18 @@ namespace System.Management.Automation
     /// <see cref="ValidateArgumentsAttribute.Validate"/>
     /// abstract method, after which they can apply the
     /// attribute to their parameters.
-    /// 
+    ///
     /// <see cref="ValidateArgumentsAttribute"/> validates the argument
     /// as a whole.  If the argument value is potentially an enumeration,
     /// you can derive from <see cref="ValidateEnumeratedArgumentsAttribute"/>
     /// which will take care of unrolling the enumeration
     /// and validate each element individually.
-    /// 
+    ///
     /// It is also recommended to override
     /// <see cref="System.Object.ToString"/> to return a readable string
     /// similar to the attribute declaration, for example
     /// "[ValidateRangeAttribute(5,10)]".
-    /// 
+    ///
     /// If this attribute is applied to a string parameter, the string command argument will be validated.
     /// If this attribute is applied to a string[] parameter, the string[] command argument will be validated.
     /// </remarks>
@@ -141,7 +144,7 @@ namespace System.Management.Automation
         /// The engine APIs for the context under which the prerequisite is being
         /// evaluated.
         /// </param>
-        /// 
+        ///
         /// <returns>bool true if the validate succeeded</returns>
         /// <exception cref="ValidationMetadataException">
         /// Whenever any exception occurs during data validate.
@@ -172,13 +175,13 @@ namespace System.Management.Automation
     /// the argument value is an enumeration,
     /// <see cref="ValidateEnumeratedArgumentsAttribute"/> will unroll
     /// the enumeration and validate each item individually.
-    /// 
+    ///
     /// Existing enumerated validation attributes include
     /// <see cref="ValidateLengthAttribute"/>,
     /// <see cref="ValidateRangeAttribute"/>,
     /// <see cref="ValidatePatternAttribute"/>, and
     /// <see cref="ValidateSetAttribute"/>.
-    /// 
+    ///
     /// PSSnapins wishing to create custom enumerated argument validation attributes
     /// should derive from
     /// <seealso cref="ValidateEnumeratedArgumentsAttribute"/>
@@ -186,12 +189,12 @@ namespace System.Management.Automation
     /// <seealso cref="ValidateEnumeratedArgumentsAttribute.ValidateElement"/>
     /// abstract method, after which they can apply the
     /// attribute to their parameters.
-    /// 
+    ///
     /// It is also recommended to override
     /// <see cref="System.Object.ToString"/> to return a readable string
     /// similar to the attribute declaration, for example
     /// "[ValidateRangeAttribute(5,10)]".
-    /// 
+    ///
     /// If this attribute is applied to a string parameter, the string command argument will be validated.
     /// If this attribute is applied to a string[] parameter, each string command argument will be validated.
     /// </remarks>
@@ -269,22 +272,22 @@ namespace System.Management.Automation
     #region Misc Attributes
 
     /// <summary>
-    /// To specify RunAs behavior for the class 
+    /// To specify RunAs behavior for the class
     /// /// </summary>
     public enum DSCResourceRunAsCredential
     {
         /// <summary>Default is same as optional.</summary>
         Default,
         /// <summary>
-        /// PsDscRunAsCredential can not be used for this DSC Resource         
+        /// PsDscRunAsCredential can not be used for this DSC Resource
         /// </summary>
         NotSupported,
         /// <summary>
-        /// PsDscRunAsCredential is mandatory for resource         
+        /// PsDscRunAsCredential is mandatory for resource
         /// </summary>
         Mandatory,
         /// <summary>
-        /// PsDscRunAsCredential can or can not be specified         
+        /// PsDscRunAsCredential can or can not be specified
         /// </summary>
         Optional = Default,
     }
@@ -295,9 +298,9 @@ namespace System.Management.Automation
     [AttributeUsage(AttributeTargets.Class)]
     public class DscResourceAttribute : CmdletMetadataAttribute
     {
-        /// <summary>        
-        /// To specify RunAs Behavior for the resource. 
-        /// </summary>        
+        /// <summary>
+        /// To specify RunAs Behavior for the resource.
+        /// </summary>
         public DSCResourceRunAsCredential RunAsCredential { get; set; }
     }
 
@@ -531,9 +534,9 @@ namespace System.Management.Automation
 
         /// <summary>
         /// Attributes implemented by a provider can use:
-        /// 
+        ///
         ///     [OutputType(ProviderCmdlet='cmdlet', typeof(...))]
-        ///     
+        ///
         /// To specify the provider specific objects returned for a given cmdlet.
         /// </summary>
         public string ProviderCmdlet { get; set; }
@@ -627,7 +630,7 @@ namespace System.Management.Automation
         public int Position { get; set; } = int.MinValue;
 
         /// <summary>
-        /// Gets and sets the name of the parameter set this parameter belongs to. When 
+        /// Gets and sets the name of the parameter set this parameter belongs to. When
         /// it is not specified ParameterAttribute.AllParameterSets is assumed.
         /// </summary>
         public string ParameterSetName
@@ -644,27 +647,27 @@ namespace System.Management.Automation
         }
 
         /// <summary>
-        /// Gets and sets a flag specifying if this parameter is Mandatory. When 
+        /// Gets and sets a flag specifying if this parameter is Mandatory. When
         /// it is not specified, false is assumed and the parameter is considered optional.
         /// </summary>
         public bool Mandatory { get; set; } = false;
 
         /// <summary>
-        /// Gets and sets a flag that specifies that this parameter can take values 
+        /// Gets and sets a flag that specifies that this parameter can take values
         /// from the incoming pipeline object. When it is not specified, false is assumed.
         /// </summary>
         public bool ValueFromPipeline { get; set; }
 
         /// <summary>
         /// Gets and sets a flag that specifies that this parameter can take values from a property
-        /// in the incoming pipeline object with the same name as the parameter. When it 
+        /// in the incoming pipeline object with the same name as the parameter. When it
         /// is not specified, false is assumed.
         /// </summary>
         public bool ValueFromPipelineByPropertyName { get; set; }
 
         /// <summary>
         /// Gets and sets a flag that specifies that the remaining command line parameters
-        /// should be associated with this parameter in the form of an array. When it 
+        /// should be associated with this parameter in the form of an array. When it
         /// is not specified, false is assumed.
         /// </summary>
         public bool ValueFromRemainingArguments { get; set; } = false;
@@ -683,14 +686,14 @@ namespace System.Management.Automation
             {
                 if (string.IsNullOrEmpty(value))
                 {
-                    throw PSTraceSource.NewArgumentException("value");
+                    throw PSTraceSource.NewArgumentException("HelpMessage");
                 }
                 _helpMessage = value;
             }
         }
 
         /// <summary>
-        /// Gets and sets the base name of the resource for a help message. When this field is specified, 
+        /// Gets and sets the base name of the resource for a help message. When this field is specified,
         /// HelpMessageResourceId must also be specified.
         /// </summary>
         /// <exception cref="ArgumentException">for a null or empty value when setting</exception>
@@ -704,7 +707,7 @@ namespace System.Management.Automation
             {
                 if (string.IsNullOrEmpty(value))
                 {
-                    throw PSTraceSource.NewArgumentException("value");
+                    throw PSTraceSource.NewArgumentException("HelpMessageBaseName");
                 }
                 _helpMessageBaseName = value;
             }
@@ -725,7 +728,7 @@ namespace System.Management.Automation
             {
                 if (string.IsNullOrEmpty(value))
                 {
-                    throw PSTraceSource.NewArgumentException("value");
+                    throw PSTraceSource.NewArgumentException("HelpMessageResourceId");
                 }
                 _helpMessageResourceId = value;
             }
@@ -754,7 +757,7 @@ namespace System.Management.Automation
     public class PSTypeNameAttribute : Attribute
     {
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public string PSTypeName { get; private set; }
 
@@ -798,7 +801,7 @@ namespace System.Management.Automation
         public object Value { get; set; }
 
         /// <summary>
-        /// Specify the help string for the default value of a command parameter. 
+        /// Specify the help string for the default value of a command parameter.
         /// </summary>
         public string Help { get; set; }
     }
@@ -839,7 +842,7 @@ namespace System.Management.Automation
         /// specified by MinLength and MaxLength
         /// </summary>
         /// <param name="element">object to validate</param>
-        /// <exception cref="ValidationMetadataException">if <paramref name="element"/> is not a string 
+        /// <exception cref="ValidationMetadataException">if <paramref name="element"/> is not a string
         /// with length between minLength and maxLength</exception>
         /// <exception cref="ArgumentException">for invalid arguments</exception>
         protected override void ValidateElement(object element)
@@ -896,6 +899,31 @@ namespace System.Management.Automation
         }
     }
 
+    /// <Summary>
+    /// Predefined range kind to use with ValidateRangeAttribute.
+    /// </Summary>
+    public enum ValidateRangeKind 
+    {
+        /// <Summary>
+        /// Range is greater than 0.
+        /// </Summary>
+        Positive,
+        
+        /// <Summary>
+        /// Range is greater than or equal to 0.
+        /// </Summary>
+        NonNegative,
+        
+        /// <Summary>
+        /// Range is less than 0.
+        /// </Summary>
+        Negative,
+
+        /// <Summary>
+        /// Range is less than or equal to 0.
+        /// </Summary>        
+        NonPositive
+    }
     /// <summary>
     /// Validates that each parameter argument falls in the range
     /// specified by MinRange and MaxRange
@@ -919,9 +947,11 @@ namespace System.Management.Automation
 
         /// <summary>
         /// The range values and the value to validate will all be converted to the promoted type.
-        /// If minRange and maxRange are the same type, 
+        /// If minRange and maxRange are the same type,
         /// </summary>
         private Type _promotedType;
+
+        ValidateRangeKind? _rangeKind;
 
         /// <summary>
         /// Validates that each parameter argument falls in the range
@@ -948,37 +978,14 @@ namespace System.Management.Automation
             {
                 element = o.BaseObject;
             }
-
-            // minRange and maxRange have the same type, so we just need
-            // to compare to one of them
-            if (element.GetType() != _promotedType)
+            
+            if (_rangeKind.HasValue)
             {
-                object resultValue;
-                if (LanguagePrimitives.TryConvertTo(element, _promotedType, out resultValue))
-                {
-                    element = resultValue;
-                }
-                else
-                {
-                    throw new ValidationMetadataException("ValidationRangeElementType",
-                        null, Metadata.ValidateRangeElementType,
-                        element.GetType().Name, MinRange.GetType().Name);
-                }
+                ValidateRange(element, (ValidateRangeKind)_rangeKind);
             }
-
-            // They are the same type and are all IComparable, so this should not throw
-            if (_minComparable.CompareTo(element) > 0)
+            else
             {
-                throw new ValidationMetadataException("ValidateRangeTooSmall",
-                    null, Metadata.ValidateRangeSmallerThanMinRangeFailure,
-                    element.ToString(), MinRange.ToString());
-            }
-
-            if (_maxComparable.CompareTo(element) < 0)
-            {
-                throw new ValidationMetadataException("ValidateRangeTooBig",
-                    null, Metadata.ValidateRangeGreaterThanMaxRangeFailure,
-                    element.ToString(), MaxRange.ToString());
+                ValidateRange(element);
             }
         }
 
@@ -1055,6 +1062,139 @@ namespace System.Management.Automation
             MaxRange = maxRange;
         }
 
+        /// <summary>
+        /// Initializes a new instance of the ValidateRangeAttribute class
+        /// this constructor uses a predefined ranged
+        /// </summary>
+        public ValidateRangeAttribute(ValidateRangeKind kind) : base()
+        {
+            _rangeKind = kind;
+        }
+
+        private void ValidateRange(object element, ValidateRangeKind rangeKind)
+        {
+            Type commonType = GetCommonType(typeof(int),element.GetType());
+            if (commonType == null)
+            {
+                    throw new ValidationMetadataException(
+                    "ValidationRangeElementType",
+                    null, 
+                    Metadata.ValidateRangeElementType,
+                    element.GetType().Name, 
+                    typeof(int).Name);
+            }
+
+            object resultValue;
+            IComparable dynamicZero = 0;
+
+            if (LanguagePrimitives.TryConvertTo(element, commonType, out resultValue))
+            {
+                element = resultValue;
+                
+                if (LanguagePrimitives.TryConvertTo(0, commonType, out resultValue))
+                {
+                    dynamicZero = (IComparable)resultValue;
+                }                    
+            }
+            else
+            {
+                throw new ValidationMetadataException(
+                    "ValidationRangeElementType",
+                    null, 
+                    Metadata.ValidateRangeElementType,
+                    element.GetType().Name, 
+                    commonType.Name);
+            }
+
+            switch (rangeKind)
+            {
+                case ValidateRangeKind.Positive:
+                    if (dynamicZero.CompareTo(element) >= 0)
+                    {
+                        throw new ValidationMetadataException(
+                            "ValidateRangePositiveFailure",
+                            null, 
+                            Metadata.ValidateRangePositiveFailure,
+                            element.ToString());
+                    }
+                    break;
+                case ValidateRangeKind.NonNegative:
+                    if (dynamicZero.CompareTo(element) > 0)
+                    {
+                        throw new ValidationMetadataException(
+                            "ValidateRangeNonNegativeFailure",
+                            null, 
+                            Metadata.ValidateRangeNonNegativeFailure,
+                            element.ToString());
+                    }
+                    break;
+                case ValidateRangeKind.Negative:
+                    if (dynamicZero.CompareTo(element) <= 0)
+                    {
+                        throw new ValidationMetadataException(
+                            "ValidateRangeNegativeFailure",
+                            null, 
+                            Metadata.ValidateRangeNegativeFailure,
+                            element.ToString());
+                    }
+                    break;
+                case ValidateRangeKind.NonPositive:
+                    if (dynamicZero.CompareTo(element) < 0)
+                    {
+                        throw new ValidationMetadataException(
+                            "ValidateRangeNonPositiveFailure",
+                            null, 
+                            Metadata.ValidateRangeNonPositiveFailure,
+                            element.ToString());
+                    }
+                    break;
+                }
+        }
+
+        private void ValidateRange(object element)
+        {
+            // MinRange and maxRange have the same type, so we just need
+            // to compare to one of them.
+            if (element.GetType() != _promotedType)
+            {
+                object resultValue;
+                if (LanguagePrimitives.TryConvertTo(element, _promotedType, out resultValue))
+                {
+                    element = resultValue;
+                }
+                else
+                {
+                    throw new ValidationMetadataException(
+                        "ValidationRangeElementType",
+                        null, 
+                        Metadata.ValidateRangeElementType,
+                        element.GetType().Name, 
+                        MinRange.GetType().Name);
+                }
+            }
+
+            // They are the same type and are all IComparable, so this should not throw
+            if (_minComparable.CompareTo(element) > 0)
+            {
+                throw new ValidationMetadataException(
+                    "ValidateRangeTooSmall",
+                    null, 
+                    Metadata.ValidateRangeSmallerThanMinRangeFailure,
+                    element.ToString(), 
+                    MinRange.ToString());
+            }
+
+            if (_maxComparable.CompareTo(element) < 0)
+            {
+                throw new ValidationMetadataException(
+                    "ValidateRangeTooBig",
+                    null,
+                    Metadata.ValidateRangeGreaterThanMaxRangeFailure,
+                    element.ToString(),
+                    MaxRange.ToString());
+            }
+        }
+
         private static Type GetCommonType(Type minType, Type maxType)
         {
             Type resultType = null;
@@ -1114,10 +1254,21 @@ namespace System.Management.Automation
         public RegexOptions Options { set; get; } = RegexOptions.IgnoreCase;
 
         /// <summary>
+        /// Gets or sets the custom error message pattern that is displayed to the user.
+        ///
+        /// The text representation of the object being validated and the validating regex is passed as
+        /// the first and second formatting parameters to the ErrorMessage formatting pattern.
+        /// <example>
+        /// [ValidatePattern("\s+", ErrorMessage="The text '{0}' did not pass validation of regex '{1}'")]
+        /// </example>
+        /// </summary>
+        public string ErrorMessage { get; set; }
+
+        /// <summary>
         /// Validates that each parameter argument matches the RegexPattern
         /// </summary>
         /// <param name="element">object to validate</param>
-        /// <exception cref="ValidationMetadataException">if <paramref name="element"/> is not a string 
+        /// <exception cref="ValidationMetadataException">if <paramref name="element"/> is not a string
         ///  that matches the pattern
         ///  and for invalid arguments</exception>
         protected override void ValidateElement(object element)
@@ -1136,8 +1287,9 @@ namespace System.Management.Automation
             Match match = regex.Match(objectString);
             if (!match.Success)
             {
+                var errorMessageFormat = String.IsNullOrEmpty(ErrorMessage) ? Metadata.ValidatePatternFailure : ErrorMessage;
                 throw new ValidationMetadataException("ValidatePatternFailure",
-                        null, Metadata.ValidatePatternFailure,
+                        null, errorMessageFormat,
                         objectString, RegexPattern);
             }
         }
@@ -1159,10 +1311,22 @@ namespace System.Management.Automation
     }
 
     /// <summary>
-    /// Class for validating against a script block. 
+    /// Class for validating against a script block.
     /// </summary>
     public sealed class ValidateScriptAttribute : ValidateEnumeratedArgumentsAttribute
     {
+        /// <summary>
+        /// Gets or sets the custom error message that is displayed to the user.
+        ///
+        /// The item being validated and the validating scriptblock is passed as the first and second
+        /// formatting argument.
+        ///
+        /// <example>
+        /// [ValidateScript("$_ % 2", ErrorMessage = "The item '{0}' did not pass validation of script '{1}'")]
+        /// </example>
+        /// </summary>
+        public string ErrorMessage { get; set; }
+
         /// <summary>
         /// Gets the scriptblock to be used in the validation
         /// </summary>
@@ -1193,8 +1357,9 @@ namespace System.Management.Automation
 
             if (!LanguagePrimitives.IsTrue(result))
             {
+                var errorMessageFormat = String.IsNullOrEmpty(ErrorMessage) ? Metadata.ValidateScriptFailure : ErrorMessage;
                 throw new ValidationMetadataException("ValidateScriptFailure",
-                        null, Metadata.ValidateScriptFailure,
+                        null, errorMessageFormat,
                         element, ScriptBlock);
             }
         }
@@ -1284,18 +1449,18 @@ namespace System.Management.Automation
                     null, Metadata.ValidateCountNotInArray);
             }
 
-            if (len < MinLength)
+            if (MinLength == MaxLength && len != MaxLength)
             {
-                throw new ValidationMetadataException("ValidateCountSmallerThanMin",
-                    null, Metadata.ValidateCountMinLengthFailure,
-                    MinLength, len);
+                throw new ValidationMetadataException("ValidateCountExactFailure",
+                    null, Metadata.ValidateCountExactFailure,
+                    MaxLength, len);
             }
 
-            if (len > MaxLength)
+            if (len < MinLength || len > MaxLength)
             {
-                throw new ValidationMetadataException("ValidateCountGreaterThanMax",
-                    null, Metadata.ValidateCountMaxLengthFailure,
-                    MaxLength, len);
+                throw new ValidationMetadataException("ValidateCountMinMaxFailure",
+                    null, Metadata.ValidateCountMinMaxFailure,
+                    MinLength, MaxLength, len);
             }
         }
 
@@ -1329,27 +1494,116 @@ namespace System.Management.Automation
     }
 
     /// <summary>
+    /// Optional base class for <see cref="IValidateSetValuesGenerator"/> implementations that want a default implementation to cache valid values.
+    /// </summary>
+    public abstract class CachedValidValuesGeneratorBase : IValidateSetValuesGenerator
+    {
+        // Cached valid values.
+        private string[] _validValues;
+        private int _validValuesCacheExpiration;
+
+        /// <summary>
+        /// Initializes a new instance of the CachedValidValuesGeneratorBase class.
+        /// </summary>
+        /// <param name="cacheExpirationInSeconds">Sets a time interval in seconds to reset the '_validValues' dynamic valid values cache.</param>
+        protected CachedValidValuesGeneratorBase(int cacheExpirationInSeconds)
+        {
+            _validValuesCacheExpiration = cacheExpirationInSeconds;
+        }
+
+        /// <summary>
+        /// Abstract method to generate a valid values.
+        /// </summary>
+        public abstract string[] GenerateValidValues();
+
+        /// <summary>
+        /// Get a valid values.
+        /// </summary>
+        public string[] GetValidValues()
+        {
+            // Because we have a background task to clear the cache by '_validValues = null'
+            // we use the local variable to exclude a race condition.
+            var validValuesLocal = _validValues;
+            if (validValuesLocal != null)
+            {
+                return validValuesLocal;
+            }
+
+            var validValuesNoCache = GenerateValidValues();
+
+            if (validValuesNoCache == null)
+            {
+                throw new ValidationMetadataException(
+                    "ValidateSetGeneratedValidValuesListIsNull",
+                    null,
+                    Metadata.ValidateSetGeneratedValidValuesListIsNull);
+            }
+
+            if (_validValuesCacheExpiration > 0)
+            {
+                _validValues = validValuesNoCache;
+                Task.Delay(_validValuesCacheExpiration * 1000).ContinueWith((task) => _validValues = null);
+            }
+
+            return validValuesNoCache;
+        }
+    }
+
+    /// <summary>
     /// Validates that each parameter argument is present in a specified set
     /// </summary>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
     public sealed class ValidateSetAttribute : ValidateEnumeratedArgumentsAttribute
     {
+        // We can use either static '_validValues'
+        // or dynamic valid values list generated by instance of 'validValuesGenerator'.
         private string[] _validValues;
+        private IValidateSetValuesGenerator validValuesGenerator = null;
+
+        // The valid values generator cache works across 'ValidateSetAttribute' instances.
+        private static ConcurrentDictionary<Type, IValidateSetValuesGenerator> s_ValidValuesGeneratorCache = new ConcurrentDictionary<Type, IValidateSetValuesGenerator>();
 
         /// <summary>
-        /// Gets a flag specifying if we should ignore the case when performing string comparison. The 
+        /// Gets or sets the custom error message that is displayed to the user
+        ///
+        /// The item being validated and a text representation of the validation set
+        /// is passed as the first and second formatting argument to the ErrorMessage formatting pattern.
+        ///
+        /// <example>
+        /// [ValidateSet("A","B","C", ErrorMessage="The item '{0}' is not part of the set '{1}'.")
+        /// </example>
+        /// </summary>
+        public string ErrorMessage { get; set; }
+
+        /// <summary>
+        /// Gets a flag specifying if we should ignore the case when performing string comparison. The
         /// default is true.
         /// </summary>
         public bool IgnoreCase { get; set; } = true;
 
         /// <summary>
-        /// Gets the values in the set
+        /// Gets the valid values in the set.
         /// </summary>
         public IList<string> ValidValues
         {
             get
             {
-                return _validValues;
+                if (validValuesGenerator == null)
+                {
+                    return _validValues;
+                }
+
+                var validValuesLocal = validValuesGenerator.GetValidValues();
+
+                if (validValuesLocal == null)
+                {
+                    throw new ValidationMetadataException(
+                        "ValidateSetGeneratedValidValuesListIsNull",
+                        null,
+                        Metadata.ValidateSetGeneratedValidValuesListIsNull);
+                }
+
+                return validValuesLocal;
             }
         }
 
@@ -1372,22 +1626,21 @@ namespace System.Management.Automation
             }
 
             string objString = element.ToString();
-            for (int setIndex = 0; setIndex < _validValues.Length; setIndex++)
+            foreach (string setString in ValidValues)
             {
-                string setString = _validValues[setIndex];
-
                 if (CultureInfo.InvariantCulture.
                         CompareInfo.Compare(setString, objString,
                                             IgnoreCase
                                                 ? CompareOptions.IgnoreCase
                                                 : CompareOptions.None) == 0)
-
                 {
                     return;
                 }
             }
+
+            var errorMessageFormat = String.IsNullOrEmpty(ErrorMessage) ? Metadata.ValidateSetFailure : ErrorMessage;
             throw new ValidationMetadataException("ValidateSetFailure", null,
-                Metadata.ValidateSetFailure,
+                errorMessageFormat,
                 element.ToString(), SetAsString());
         }
 
@@ -1416,6 +1669,37 @@ namespace System.Management.Automation
 
             _validValues = validValues;
         }
+
+        /// <summary>
+        /// Initializes a new instance of the ValidateSetAttribute class.
+        /// Valid values is returned dynamically from a custom class implementing 'IValidateSetValuesGenerator' interface.
+        /// </summary>
+        /// <param name="valuesGeneratorType">class that implements the 'IValidateSetValuesGenerator' interface</param>
+        /// <exception cref="ArgumentException">for null arguments</exception>
+        public ValidateSetAttribute(Type valuesGeneratorType)
+        {
+            // We check 'IsNotPublic' because we don't want allow 'Activator.CreateInstance' create an instance of non-public type.
+            if (!typeof(IValidateSetValuesGenerator).IsAssignableFrom(valuesGeneratorType) || valuesGeneratorType.IsNotPublic)
+            {
+                throw PSTraceSource.NewArgumentException("valuesGeneratorType");
+            }
+
+            // Add a valid values generator to the cache.
+            // We don't cache valid values.
+            // We expect that valid values can be cached in the valid values generator.
+            validValuesGenerator = s_ValidValuesGeneratorCache.GetOrAdd(valuesGeneratorType, (key) => (IValidateSetValuesGenerator)Activator.CreateInstance(key));
+        }
+    }
+
+    /// <summary>
+    /// Allows dynamically generate set of values for ValidateSetAttribute.
+    /// </summary>
+    public interface IValidateSetValuesGenerator
+    {
+        /// <summary>
+        /// Get a valid values.
+        /// </summary>
+        string[] GetValidValues();
     }
 
     #region Allow
@@ -1467,6 +1751,17 @@ namespace System.Management.Automation
     public class ValidateDriveAttribute : ValidateArgumentsAttribute
     {
         private string[] _validRootDrives;
+
+        /// <summary>
+        /// Gets the values in the set
+        /// </summary>
+        public IList<string> ValidRootDrives
+        {
+            get
+            {
+                return _validRootDrives;
+            }
+        }
 
         /// <summary>
         /// Initializes a new instance of the ValidateDrivePath class
@@ -1754,7 +2049,7 @@ namespace System.Management.Automation
     /// the name.
     /// Existing argument transformation attributes include
     /// <see cref="ArgumentTypeConverterAttribute"/>.
-    /// 
+    ///
     /// PSSnapins wishing to create custom argument transformation attributes
     /// should derive from
     /// <seealso cref="ArgumentTransformationAttribute"/>
@@ -1762,12 +2057,12 @@ namespace System.Management.Automation
     /// <seealso cref="ArgumentTransformationAttribute.Transform"/>
     /// abstract method, after which they can apply the
     /// attribute to their parameters.
-    /// 
+    ///
     /// It is also recommended to override
     /// <see cref="System.Object.ToString"/> to return a readable string
     /// similar to the attribute declaration, for example
     /// "[ValidateRangeAttribute(5,10)]".
-    /// 
+    ///
     /// If multiple transformations are defined on a parameter,
     /// they will be invoked in series, each getting the output
     /// of the previous transformation.

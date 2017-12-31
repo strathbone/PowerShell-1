@@ -139,9 +139,8 @@ namespace Microsoft.PowerShell.Commands
                         catch (IdentityNotMappedException) // thrown by SecurityIdentifier.Translate
                         {
                         }
-                        catch (SystemException e) // thrown by SecurityIdentifier.constr
+                        catch (SystemException) // thrown by SecurityIdentifier.constr
                         {
-                            CommandsCommon.CheckForSevereException(this, e);
                         }
                         //catch (ArgumentException) // thrown (indirectly) by SecurityIdentifier.constr (on XP only?)
                         //{ catch not needed - this is already caught as SystemException
@@ -149,7 +148,7 @@ namespace Microsoft.PowerShell.Commands
                         //catch (PlatformNotSupportedException) // thrown (indirectly) by SecurityIdentifier.Translate (on Win95 only?)
                         //{ catch not needed - this is already caught as SystemException
                         //}
-                        //catch (UnauthorizedAccessException) // thrown (indirectly) by SecurityIdentifier.Translate 
+                        //catch (UnauthorizedAccessException) // thrown (indirectly) by SecurityIdentifier.Translate
                         //{ catch not needed - this is already caught as SystemException
                         //}
                     }
@@ -200,9 +199,8 @@ namespace Microsoft.PowerShell.Commands
                     }
                 }
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                CommandsCommon.CheckForSevereException(this, e);
                 return false;
             }
             return false;

@@ -46,7 +46,7 @@ namespace System.Management.Automation.Runspaces
             {
                 // Building the catalog is expensive, so force that to happen early on a background thread, and do so
                 // on a file we are very likely to read anyway.
-                var pshome = Utils.GetApplicationBase(Utils.DefaultPowerShellShellID);
+                var pshome = Utils.DefaultPowerShellAppBase;
                 var unused = SecuritySupport.IsProductBinary(Path.Combine(pshome, "Modules", "Microsoft.PowerShell.Utility", "Microsoft.PowerShell.Utility.psm1"));
             });
 
@@ -835,7 +835,7 @@ namespace System.Management.Automation.Runspaces
 
 #if !CORECLR // Workflow Not Supported On CSS
     /// <summary>
-    /// 
+    ///
     /// </summary>
     public sealed class SessionStateWorkflowEntry : SessionStateCommandEntry
     {
@@ -1309,7 +1309,7 @@ namespace System.Management.Automation.Runspaces
         }
 
         /// <summary>
-        ///
+        /// Add items to this collection.
         /// </summary>
         /// <param name="items"></param>
         public void Add(IEnumerable<T> items)
@@ -1322,6 +1322,27 @@ namespace System.Management.Automation.Runspaces
                 foreach (T element in items)
                 {
                     _internalCollection.Add(element);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Special add for TypeTable type entries that removes redundant file entries.
+        /// </summary>
+        internal void AddTypeTableTypesInfo(IEnumerable<T> items)
+        {
+            if (typeof(T) != typeof(SessionStateTypeEntry)) { throw new PSInvalidOperationException(); }
+
+            lock (_syncObject)
+            {
+                foreach (var element in items)
+                {
+                    var typeEntry = element as SessionStateTypeEntry;
+                    if (typeEntry.TypeData != null)
+                    {
+                        // Skip type file entries.
+                        _internalCollection.Add(element);
+                    }
                 }
             }
         }
@@ -1576,7 +1597,7 @@ namespace System.Management.Automation.Runspaces
 
         private static void IncludePowerShellCoreFormats(InitialSessionState iss)
         {
-            string psHome = Utils.GetApplicationBase(Utils.DefaultPowerShellShellID);
+            string psHome = Utils.DefaultPowerShellAppBase;
             if (string.IsNullOrEmpty(psHome))
             {
                 return;
@@ -1631,7 +1652,7 @@ namespace System.Management.Automation.Runspaces
             iss.ThrowOnRunspaceOpenError = true;
             iss.UseFullLanguageModeInDebugger = false;
 
-            // WIN8:551312 M3P endpoint should have NO application exposed 
+            // WIN8:551312 M3P endpoint should have NO application exposed
             //
             foreach (SessionStateCommandEntry entry in iss.Commands)
             {
@@ -1701,7 +1722,7 @@ namespace System.Management.Automation.Runspaces
             iss.ThrowOnRunspaceOpenError = true;
             iss.UseFullLanguageModeInDebugger = false;
 
-            // WIN8:551312 M3P endpoint should have NO application exposed 
+            // WIN8:551312 M3P endpoint should have NO application exposed
             //
             foreach (SessionStateCommandEntry entry in iss.Commands)
             {
@@ -1778,7 +1799,7 @@ namespace System.Management.Automation.Runspaces
             iss.ThrowOnRunspaceOpenError = true;
             iss.UseFullLanguageModeInDebugger = false;
 
-            // WIN8:551312 M3P endpoint should have NO application exposed 
+            // WIN8:551312 M3P endpoint should have NO application exposed
             //
             foreach (SessionStateCommandEntry entry in iss.Commands)
             {
@@ -2827,7 +2848,7 @@ namespace System.Management.Automation.Runspaces
 
             // Win8:328748 - functions defined in global scope end up in a module
             // Since we import the core modules, EngineSessionState's module is set to the last imported module. So, if a function is defined in global scope, it ends up in that module.
-            // Setting the module to null fixes that. 
+            // Setting the module to null fixes that.
             initializedRunspace.ExecutionContext.EngineSessionState.Module = null;
 
             // Set the SessionStateDrive here since we have all the provider information at this point
@@ -3211,8 +3232,6 @@ namespace System.Management.Automation.Runspaces
                 }
                 catch (Exception e)
                 {
-                    CommandProcessorBase.CheckForSevereException(e);
-
                     if (ThrowOnRunspaceOpenError)
                     {
                         return e;
@@ -3371,7 +3390,7 @@ namespace System.Management.Automation.Runspaces
 
         /// <summary>
         /// Helper method to search for commands matching the provided commandPattern.
-        /// Supports wild cards and if the commandPattern contains wildcard characters then multiple 
+        /// Supports wild cards and if the commandPattern contains wildcard characters then multiple
         /// results can be returned.  Otherwise a single (and first) match will be returned.
         /// If a moduleName is provided then only commands associated with that module will be returned.
         /// Only public commands are searched to start with.  If no results are found then a search on
@@ -3441,9 +3460,9 @@ namespace System.Management.Automation.Runspaces
                 else
                 {
                     // If FullyQualifiedPath is supplied then use it.
-                    // In this scenario, the FullyQualifiedPath would 
-                    // refer to $pshome\Modules location where core 
-                    // modules are deployed. 
+                    // In this scenario, the FullyQualifiedPath would
+                    // refer to $pshome\Modules location where core
+                    // modules are deployed.
                     if (!string.IsNullOrEmpty(path))
                     {
                         name = Path.Combine(path, name);
@@ -3661,9 +3680,8 @@ namespace System.Management.Automation.Runspaces
                     }
                 }
             }
-            catch (Exception e) // swallow all non-severe exceptions
+            catch (Exception)
             {
-                CommandProcessorBase.CheckForSevereException(e);
             }
         }
 
@@ -3854,7 +3872,12 @@ namespace System.Management.Automation.Runspaces
                     context.TypeTable = typeTable;
 
                     Types.Clear();
-                    Types.Add(typeTable.typesInfo);
+
+                    // A TypeTable contains types info along with type file references used to create the types info,
+                    // which is redundant information.  When resused in a runspace the ISS unpacks the file types again
+                    // resulting in duplicate types and duplication errors when processed.
+                    // So use this special Add method to filter all types files found in the TypeTable.
+                    Types.AddTypeTableTypesInfo(typeTable.typesInfo);
 
                     return;
                 }
@@ -3914,7 +3937,8 @@ namespace System.Management.Automation.Runspaces
 
             if (errors.Count > 0)
             {
-                var allErrors = new StringBuilder('\n');
+                var allErrors = new StringBuilder();
+                allErrors.Append('\n');
                 foreach (string error in errors)
                 {
                     if (!string.IsNullOrEmpty(error))
@@ -4152,7 +4176,7 @@ namespace System.Management.Automation.Runspaces
                 throw e;
             }
 
-#if !CORECLR // CustomPSSnapIn Not Supported On CSS. 
+#if !CORECLR // CustomPSSnapIn Not Supported On CSS.
             if (!String.IsNullOrEmpty(psSnapInInfo.CustomPSSnapInType))
             {
                 LoadCustomPSSnapIn(psSnapInInfo);
@@ -4183,7 +4207,7 @@ namespace System.Management.Automation.Runspaces
 
             // We skip checking if the file exists when it's in $PSHOME because of magic
             // where we have the former contents of those files built into the engine directly.
-            var psHome = Utils.GetApplicationBase(Utils.DefaultPowerShellShellID);
+            var psHome = Utils.DefaultPowerShellAppBase;
 
             foreach (string file in psSnapInInfo.Types)
             {
@@ -4443,7 +4467,7 @@ namespace System.Management.Automation.Runspaces
         {
             s_PSSnapInTracer.WriteLine("Loading assembly for psSnapIn {0}", fileName);
 
-            Assembly assembly = ClrFacade.LoadFrom(fileName);
+            Assembly assembly = Assembly.LoadFrom(fileName);
             if (assembly == null)
             {
                 s_PSSnapInTracer.TraceError("Loading assembly for psSnapIn {0} failed", fileName);
@@ -4470,10 +4494,14 @@ namespace System.Management.Automation.Runspaces
             string throwAwayHelpFile = null;
             PSSnapInHelpers.AnalyzePSSnapInAssembly(assembly, assemblyPath, null, module, true, out cmdlets, out aliases, out providers, out throwAwayHelpFile);
 
-            SessionStateAssemblyEntry assemblyEntry =
-                new SessionStateAssemblyEntry(assembly.FullName, assemblyPath);
-
-            this.Assemblies.Add(assemblyEntry);
+            // If this is an in-memory assembly, don't added it to the list of AssemblyEntries
+            // since it can't be loaded by path or name
+            if (! string.IsNullOrEmpty(assembly.Location))
+            {
+                SessionStateAssemblyEntry assemblyEntry =
+                    new SessionStateAssemblyEntry(assembly.FullName, assemblyPath);
+                this.Assemblies.Add(assemblyEntry);
+            }
 
             if (cmdlets != null)
             {
@@ -4520,14 +4548,14 @@ namespace System.Management.Automation.Runspaces
 
    To customize your own custom options, pass a hashtable to CompleteInput, e.g.
          return [System.Management.Automation.CommandCompletion]::CompleteInput($inputScript, $cursorColumn,
-             @{ RelativeFilePaths=$false } 
+             @{ RelativeFilePaths=$false }
 #>
 
 [CmdletBinding(DefaultParameterSetName = 'ScriptInputSet')]
 Param(
     [Parameter(ParameterSetName = 'ScriptInputSet', Mandatory = $true, Position = 0)]
     [string] $inputScript,
-    
+
     [Parameter(ParameterSetName = 'ScriptInputSet', Mandatory = $true, Position = 1)]
     [int] $cursorColumn,
 
@@ -4539,7 +4567,7 @@ Param(
 
     [Parameter(ParameterSetName = 'AstInputSet', Mandatory = $true, Position = 2)]
     [System.Management.Automation.Language.IScriptPosition] $positionOfCursor,
-    
+
     [Parameter(ParameterSetName = 'ScriptInputSet', Position = 2)]
     [Parameter(ParameterSetName = 'AstInputSet', Position = 3)]
     [Hashtable] $options = $null
@@ -4595,7 +4623,12 @@ $RawUI.SetBufferContents(
             else
             {
                 // Porting note: non-Windows platforms use `clear`
-                return "& (Get-Command -CommandType Application clear | Select-Object -First 1).Definition";
+                return @"
+& (Get-Command -CommandType Application clear | Select-Object -First 1).Definition
+# .Link
+# https://go.microsoft.com/fwlink/?LinkID=225747
+# .ExternalHelp System.Management.Automation.dll-help.xml
+";
             }
         }
 
@@ -4611,7 +4644,7 @@ $RawUI.SetBufferContents(
             return @"
 <#
 .FORWARDHELPTARGETNAME Get-Help
-.FORWARDHELPCATEGORY Cmdlet 
+.FORWARDHELPCATEGORY Cmdlet
 #>
 [CmdletBinding(DefaultParameterSetName='AllUsersView', HelpUri='https://go.microsoft.com/fwlink/?LinkID=113316')]
 param(
@@ -4669,9 +4702,9 @@ param(
         internal static string GetMkdirFunctionText()
         {
             return @"
-<# 
+<#
 .FORWARDHELPTARGETNAME New-Item
-.FORWARDHELPCATEGORY Cmdlet 
+.FORWARDHELPCATEGORY Cmdlet
 #>
 
 [CmdletBinding(DefaultParameterSetName='pathSet',
@@ -4739,41 +4772,6 @@ end {
 ";
         }
 
-
-        internal static string GetGetVerbText()
-        {
-            return @"
-param(
-    [Parameter(ValueFromPipeline=$true)]
-    [string[]]
-    $verb = '*'
-)
-begin {
-    $allVerbs = [System.Reflection.IntrospectionExtensions]::GetTypeInfo([PSObject]).Assembly.ExportedTypes |
-        Microsoft.PowerShell.Core\Where-Object {$_.Name -match '^Verbs.'} |
-        Microsoft.PowerShell.Utility\Get-Member -type Properties -static |
-        Microsoft.PowerShell.Utility\Select-Object @{
-            Name='Verb'
-            Expression = {$_.Name}
-        }, @{
-            Name='Group'
-            Expression = {
-                $str = ""$($_.TypeName)""
-                $str.Substring($str.LastIndexOf('Verbs') + 5)
-            }
-        }
-}
-process {
-    foreach ($v in $verb) {
-        $allVerbs | Microsoft.PowerShell.Core\Where-Object { $_.Verb -like $v }
-    }
-}
-# .Link
-# https://go.microsoft.com/fwlink/?LinkID=160712
-# .ExternalHelp System.Management.Automation.dll-help.xml
-";
-        }
-
         internal static string GetOSTFunctionText()
         {
             return @"
@@ -4819,7 +4817,7 @@ end
 }
 <#
 .ForwardHelpTargetName Out-String
-.ForwardHelpCategory Cmdlet 
+.ForwardHelpCategory Cmdlet
 #>
 ";
         }
@@ -5060,8 +5058,6 @@ end
                         "Get-Process",     "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
                     new SessionStateAliasEntry("group",
                         "Group-Object",    "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
-                    new SessionStateAliasEntry("gsv",
-                        "Get-Service",     "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
                     new SessionStateAliasEntry("gu",
                         "Get-Unique",      "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
                     new SessionStateAliasEntry("gv",
@@ -5116,8 +5112,6 @@ end
                         "Resolve-Path",    "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
                     new SessionStateAliasEntry("sal",
                         "Set-Alias",       "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
-                    new SessionStateAliasEntry("sasv",
-                        "Start-Service",   "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
                     new SessionStateAliasEntry("sbp",
                         "Set-PSBreakpoint",    "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
                     new SessionStateAliasEntry("sc",
@@ -5137,10 +5131,13 @@ end
                         "Start-Process",    "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
                     new SessionStateAliasEntry("spps",
                         "Stop-Process",    "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
-                    new SessionStateAliasEntry("spsv",
-                        "Stop-Service",    "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
                     new SessionStateAliasEntry("sv",
                         "Set-Variable",    "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
+                    // Web cmdlets aliases
+                    new SessionStateAliasEntry("irm",
+                        "Invoke-RestMethod",   "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
+                    new SessionStateAliasEntry("iwr",
+                        "Invoke-WebRequest",   "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
 // Porting note: #if !UNIX is used to disable aliases for cmdlets which conflict with Linux / OS X
 #if !UNIX
                     // ac is a native command on OS X
@@ -5152,12 +5149,18 @@ end
                         "Copy-ItemProperty",   "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
                     new SessionStateAliasEntry("diff",
                         "Compare-Object",  "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
+                    new SessionStateAliasEntry("gsv",
+                        "Get-Service",  "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
                     new SessionStateAliasEntry("sleep",
                         "Start-Sleep",     "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
                     new SessionStateAliasEntry("sort",
                         "Sort-Object",     "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
                     new SessionStateAliasEntry("start",
                         "Start-Process",    "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
+                    new SessionStateAliasEntry("sasv",
+                        "Start-Service",    "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
+                    new SessionStateAliasEntry("spsv",
+                        "Stop-Service",    "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
                     new SessionStateAliasEntry("tee",
                         "Tee-Object",      "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
                     new SessionStateAliasEntry("write",
@@ -5208,10 +5211,6 @@ end
                         "Get-PSSnapIn",   "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
                     new SessionStateAliasEntry("gwmi",
                         "Get-WmiObject",   "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
-                    new SessionStateAliasEntry("irm",
-                        "Invoke-RestMethod",   "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
-                    new SessionStateAliasEntry("iwr",
-                        "Invoke-WebRequest",   "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
                     new SessionStateAliasEntry("iwmi",
                         "Invoke-WMIMethod",     "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
                     new SessionStateAliasEntry("ogv",
@@ -5312,7 +5311,7 @@ end
                         "Receive-PSSession",   "", ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
                     new SessionStateAliasEntry("exsn",
                         "Exit-PSSession",  "", ScopedItemOptions.AllScope),
-                    // Win8: 121662/169179	Add "sls" alias for Select-String cmdlet
+                    // Win8: 121662/169179  Add "sls" alias for Select-String cmdlet
                     //   - do not use AllScope - this causes errors in profiles that set this somewhat commonly used alias.
                     new SessionStateAliasEntry("sls",
                         "Select-String", "", ScopedItemOptions.None),
@@ -5330,7 +5329,7 @@ end
         internal const string DefaultMoreFunctionText = @"
 param([string[]]$paths)
 # Nano needs to use Unicode, but Windows and Linux need the default
-$OutputEncoding = if ($IsWindows -and $IsCoreCLR) {
+$OutputEncoding = if ([System.Management.Automation.Platform]::IsNanoServer -or [System.Management.Automation.Platform]::IsIoT) {
     [System.Text.Encoding]::Unicode
 } else {
     [System.Console]::OutputEncoding
@@ -5368,7 +5367,6 @@ if($paths) {
 #if !UNIX
             SessionStateFunctionEntry.GetDelayParsedFunctionEntry("mkdir", GetMkdirFunctionText(), isProductCode: true),
 #endif
-            SessionStateFunctionEntry.GetDelayParsedFunctionEntry("Get-Verb", GetGetVerbText(), isProductCode: true),
             SessionStateFunctionEntry.GetDelayParsedFunctionEntry("oss", GetOSTFunctionText(), isProductCode: true),
 
             // Porting note: we remove the drive functions from Linux because they make no sense
@@ -5418,9 +5416,8 @@ if($paths) {
                 {
                     ssi.RemoveDrive(di, true, null);
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
-                    CommandProcessorBase.CheckForSevereException(e);
                 }
             }
         }
@@ -5550,7 +5547,7 @@ if($paths) {
 
             try
             {
-                AssemblyName assemblyName = ClrFacade.GetAssemblyName(psSnapInInfo.AbsoluteModulePath);
+                AssemblyName assemblyName = AssemblyName.GetAssemblyName(psSnapInInfo.AbsoluteModulePath);
 
                 if (!string.Equals(assemblyName.FullName, psSnapInInfo.AssemblyName, StringComparison.OrdinalIgnoreCase))
                 {
@@ -5559,7 +5556,7 @@ if($paths) {
                     throw new PSSnapInException(psSnapInInfo.Name, message);
                 }
 
-                assembly = ClrFacade.LoadFrom(psSnapInInfo.AbsoluteModulePath);
+                assembly = Assembly.LoadFrom(psSnapInInfo.AbsoluteModulePath);
             }
             catch (FileLoadException e)
             {
@@ -5890,6 +5887,10 @@ if($paths) {
                         var aliasList = new List<SessionStateAliasEntry>();
                         foreach (var alias in aliasAttribute.AliasNames)
                         {
+                            // Alias declared by AliasAttribute is set with the option 'ScopedItemOptions.None',
+                            // because we believe a user of the cmdlet, instead of the author of it,
+                            // should be the one to decide the option
+                            // ('ScopedItemOptions.ReadOnly' and/or 'ScopedItemOptions.AllScopes') of the alias usage."
                             var aliasEntry = new SessionStateAliasEntry(alias, cmdletName, "", ScopedItemOptions.None);
                             if (psSnapInInfo != null)
                             {
@@ -5962,6 +5963,10 @@ if($paths) {
                 {"Debug-Job",                         new SessionStateCmdletEntry("Debug-Job", typeof(DebugJobCommand), helpFile) },
                 {"Disable-PSSessionConfiguration",    new SessionStateCmdletEntry("Disable-PSSessionConfiguration", typeof(DisablePSSessionConfigurationCommand), helpFile) },
                 {"Disconnect-PSSession",              new SessionStateCmdletEntry("Disconnect-PSSession", typeof(DisconnectPSSessionCommand), helpFile) },
+#if !UNIX
+                {"Disable-PSRemoting",                new SessionStateCmdletEntry("Disable-PSRemoting", typeof(DisablePSRemotingCommand), helpFile) },
+                {"Enable-PSRemoting",                 new SessionStateCmdletEntry("Enable-PSRemoting", typeof(EnablePSRemotingCommand), helpFile) },
+#endif
                 {"Enable-PSSessionConfiguration",     new SessionStateCmdletEntry("Enable-PSSessionConfiguration", typeof(EnablePSSessionConfigurationCommand), helpFile) },
                 {"Enter-PSHostProcess",               new SessionStateCmdletEntry("Enter-PSHostProcess", typeof(EnterPSHostProcessCommand), helpFile) },
                 {"Enter-PSSession",                   new SessionStateCmdletEntry("Enter-PSSession", typeof(EnterPSSessionCommand), helpFile) },
@@ -6012,8 +6017,6 @@ if($paths) {
                 {"Where-Object",                      new SessionStateCmdletEntry("Where-Object", typeof(WhereObjectCommand), helpFile) },
 #if !CORECLR
                 {"Add-PSSnapin",                      new SessionStateCmdletEntry("Add-PSSnapin", typeof(AddPSSnapinCommand), helpFile) },
-                {"Disable-PSRemoting",                new SessionStateCmdletEntry("Disable-PSRemoting", typeof(DisablePSRemotingCommand), helpFile) },
-                {"Enable-PSRemoting",                 new SessionStateCmdletEntry("Enable-PSRemoting", typeof(EnablePSRemotingCommand), helpFile) },
                 {"Export-Console",                    new SessionStateCmdletEntry("Export-Console", typeof(ExportConsoleCommand), helpFile) },
                 {"Get-PSSnapin",                      new SessionStateCmdletEntry("Get-PSSnapin", typeof(GetPSSnapinCommand), helpFile) },
                 {"Remove-PSSnapin",                   new SessionStateCmdletEntry("Remove-PSSnapin", typeof(RemovePSSnapinCommand), helpFile) },

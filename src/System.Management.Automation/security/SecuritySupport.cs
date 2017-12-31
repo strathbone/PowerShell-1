@@ -10,7 +10,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using Microsoft.PowerShell;
 using Microsoft.PowerShell.Commands;
-using System.Management.Automation.Security;
+using Microsoft.Win32;
 using System.Management.Automation.Internal;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -20,18 +20,14 @@ using System.Globalization;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Runtime.InteropServices;
-
-using Microsoft.Win32;
-
 using DWORD = System.UInt32;
-using BOOL = System.UInt32;
 
 namespace Microsoft.PowerShell
 {
     /// <summary>
     /// Defines the different Execution Policies supported by the
     /// PSAuthorizationManager class.
-    /// 
+    ///
     /// </summary>
     public enum ExecutionPolicy
     {
@@ -42,17 +38,17 @@ namespace Microsoft.PowerShell
         Unrestricted = 0,
 
         /// RemoteSigned - Only .msh and .mshxml files originating from the internet
-        ///    must be digitally signed.  If remote, signed, and executed, Monad 
-        ///    prompts to determine if files from the signing publisher should be 
+        ///    must be digitally signed.  If remote, signed, and executed, Monad
+        ///    prompts to determine if files from the signing publisher should be
         ///    run or not.  This is the default setting.
         RemoteSigned = 1,
 
         /// AllSigned - All .msh and .mshxml files must be digitally signed.  If
-        ///    signed and executed, Monad prompts to determine if files from the 
+        ///    signed and executed, Monad prompts to determine if files from the
         ///    signing publisher should be run or not.
         AllSigned = 2,
 
-        /// Restricted - All .msh files are blocked.  Mshxml files must be digitally 
+        /// Restricted - All .msh files are blocked.  Mshxml files must be digitally
         ///    signed, and by a trusted publisher.  If you haven't made a trust decision
         ///    on the publisher yet, prompting is done as in AllSigned mode.
         Restricted = 3,
@@ -74,7 +70,7 @@ namespace Microsoft.PowerShell
     /// policy. They are in the following priority, with successive
     /// elements overriding the items that precede them:
     /// LocalMachine -> CurrentUser -> Runspace
-    /// 
+    ///
     /// </summary>
     public enum ExecutionPolicyScope
     {
@@ -104,7 +100,7 @@ namespace System.Management.Automation.Internal
 {
     /// <summary>
     /// The SAFER policy associated with this file
-    /// 
+    ///
     /// </summary>
     internal enum SaferPolicy
     {
@@ -262,6 +258,69 @@ namespace System.Management.Automation.Internal
             return ExecutionPolicy.Restricted;
         }
 
+
+        private static bool? _hasGpScriptParent;
+
+        /// <summary>
+        /// A value indicating that the current process was launched by GPScript.exe
+        /// Used to determine execution policy when group policies are in effect
+        /// </summary>
+        /// <remarks>
+        /// This is somewhat expensive to determine and does not change within the lifetime of the current process		
+        /// </remarks>
+        private static bool HasGpScriptParent
+        {
+            get
+            {
+                if (!_hasGpScriptParent.HasValue)
+                {
+                    _hasGpScriptParent = IsCurrentProcessLaunchedByGpScript();
+                }
+                return _hasGpScriptParent.Value;
+            }
+        }
+
+        private static bool IsCurrentProcessLaunchedByGpScript()
+        {
+            Process currentProcess = Process.GetCurrentProcess();
+            string gpScriptPath = IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.System),
+                "gpscript.exe");
+
+            bool foundGpScriptParent = false;
+            try
+            {
+                while (currentProcess != null)
+                {
+                    if (String.Equals(gpScriptPath,
+                            PsUtils.GetMainModule(currentProcess).FileName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        foundGpScriptParent = true;
+                        break;
+                    }
+                    else
+                    {
+                        currentProcess = PsUtils.GetParentProcess(currentProcess);
+                    }
+                }
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                // If you attempt to retrieve the MainModule of a 64-bit process
+                // from a WOW64 (32-bit) process, the Win32 API has a fatal
+                // flaw that causes this to return the error:
+                //   "Only part of a ReadProcessMemory or WriteProcessMemory
+                //   request was completed."
+                // In this case, we just catch the exception and eat it.
+                // The implication is that logon / logoff scripts that somehow
+                // launch the Wow64 version of PowerShell will be subject
+                // to the execution policy deployed by Group Policy (where
+                // our goal here is to not have the Group Policy execution policy
+                // affect logon / logoff scripts.
+            }
+            return foundGpScriptParent;
+        }
+
         internal static ExecutionPolicy GetExecutionPolicy(string shellId, ExecutionPolicyScope scope)
         {
 #if UNIX
@@ -290,61 +349,21 @@ namespace System.Management.Automation.Internal
                             return ExecutionPolicy.Undefined;
                     }
 
-                // TODO: Group Policy is only supported on Full systems, but !LINUX && CORECLR 
+                // TODO: Group Policy is only supported on Full systems, but !LINUX && CORECLR
                 // will run there as well, so I don't think we should remove it.
                 case ExecutionPolicyScope.UserPolicy:
                 case ExecutionPolicyScope.MachinePolicy:
                     {
                         string groupPolicyPreference = GetGroupPolicyValue(shellId, scope);
-                        if (!String.IsNullOrEmpty(groupPolicyPreference))
+
+                        // Be sure we aren't being called by Group Policy
+                        // itself. A group policy should never block a logon /
+                        // logoff script.     
+                        if (String.IsNullOrEmpty(groupPolicyPreference) || HasGpScriptParent)
                         {
-                            // Be sure we aren't being called by Group Policy
-                            // itself. A group policy should never block a logon /
-                            // logoff script.
-                            Process currentProcess = Process.GetCurrentProcess();
-                            string gpScriptPath = IO.Path.Combine(
-                                Environment.GetFolderPath(Environment.SpecialFolder.System),
-                                "gpscript.exe");
-                            bool foundGpScriptParent = false;
-
-                            try
-                            {
-                                while (currentProcess != null)
-                                {
-                                    if (String.Equals(gpScriptPath,
-                                            PsUtils.GetMainModule(currentProcess).FileName, StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        foundGpScriptParent = true;
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        currentProcess = PsUtils.GetParentProcess(currentProcess);
-                                    }
-                                }
-                            }
-                            catch (System.ComponentModel.Win32Exception)
-                            {
-                                // If you attempt to retrieve the MainModule of a 64-bit process
-                                // from a WOW64 (32-bit) process, the Win32 API has a fatal
-                                // flaw that causes this to return the error:
-                                //   "Only part of a ReadProcessMemory or WriteProcessMemory
-                                //   request was completed."
-                                // In this case, we just catch the exception and eat it.
-                                // The implication is that logon / logoff scripts that somehow
-                                // launch the Wow64 version of PowerShell will be subject
-                                // to the execution policy deployed by Group Policy (where
-                                // our goal here is to not have the Group Policy execution policy
-                                // affect logon / logoff scripts.
-                            }
-
-                            if (!foundGpScriptParent)
-                            {
-                                return ParseExecutionPolicy(groupPolicyPreference);
-                            }
-                        }
-
-                        return ExecutionPolicy.Undefined;
+                            return ExecutionPolicy.Undefined;
+                        }                                                                                                                                               
+                        return ParseExecutionPolicy(groupPolicyPreference);                                                
                     }
             }
 
@@ -506,7 +525,7 @@ namespace System.Management.Automation.Internal
                     {
                         if (hRestrictedToken == IntPtr.Zero)
                         {
-                            // This is not necessarily the "fully trusted" level, 
+                            // This is not necessarily the "fully trusted" level,
                             // it means that the thread token is complies with the requested level
                             status = SaferPolicy.Allowed;
                         }
@@ -741,7 +760,7 @@ namespace System.Management.Automation.Internal
                         {
                             Security.NativeMethods.CERT_ENHKEY_USAGE ekuStruct =
                                 (Security.NativeMethods.CERT_ENHKEY_USAGE)
-                                ClrFacade.PtrToStructure<Security.NativeMethods.CERT_ENHKEY_USAGE>(ekuBuffer);
+                                Marshal.PtrToStructure<Security.NativeMethods.CERT_ENHKEY_USAGE>(ekuBuffer);
                             IntPtr ep = ekuStruct.rgpszUsageIdentifier;
                             IntPtr ekuptr;
 
@@ -981,7 +1000,7 @@ namespace Microsoft.PowerShell.Commands
     /// <summary>
     /// Defines the valid purposes by which
     /// we can filter certificates.
-    /// </summary>    
+    /// </summary>
     internal enum CertificatePurpose
     {
         /// <summary>
@@ -992,19 +1011,19 @@ namespace Microsoft.PowerShell.Commands
         /// <summary>
         /// Certificates that can be used to sign
         /// code and scripts.
-        /// </summary>    
+        /// </summary>
         CodeSigning = 0x1,
 
         /// <summary>
         /// Certificates that can be used to encrypt
         /// data.
-        /// </summary>    
+        /// </summary>
         DocumentEncryption = 0x2,
 
         /// <summary>
         /// Certificates that can be used for any
         /// purpose.
-        /// </summary>    
+        /// </summary>
         All = 0xffff
     }
 }
@@ -1012,17 +1031,11 @@ namespace Microsoft.PowerShell.Commands
 
 namespace System.Management.Automation
 {
-#if !CORECLR
-
     using System.Security.Cryptography.Pkcs;
 
     /// <summary>
     /// Utility class for CMS (Cryptographic Message Syntax) related operations
     /// </summary>
-    /// <remarks>
-    /// The namespace 'System.Security.Cryptography.Pkcs' is not available in CoreCLR,
-    /// so the Cryptographic Message Syntax (CMS) will not be supported on OneCore PS.
-    /// </remarks>
     internal static class CmsUtils
     {
         internal static string Encrypt(byte[] contentBytes, CmsMessageRecipient[] recipients, SessionState sessionState, out ErrorRecord error)
@@ -1086,8 +1099,7 @@ namespace System.Management.Automation
             StringBuilder output = new StringBuilder();
             output.AppendLine(BEGIN_CMS_SIGIL);
 
-            string encodedString = Convert.ToBase64String(
-                bytes, Base64FormattingOptions.InsertLineBreaks);
+            string encodedString = Convert.ToBase64String(bytes, Base64FormattingOptions.InsertLineBreaks);
             output.AppendLine(encodedString);
             output.Append(END_CMS_SIGIL);
 
@@ -1130,8 +1142,6 @@ namespace System.Management.Automation
             return messageBytes;
         }
     }
-
-#endif
 
     /// <summary>
     /// Represents a message recipient for the Cms cmdlets.
@@ -1271,16 +1281,15 @@ namespace System.Management.Automation
                 return;
             }
 
-            List<X509Certificate2> certificatesToProcess = new List<X509Certificate2>(); ;
+            List<X509Certificate2> certificatesToProcess = new List<X509Certificate2>();
             try
             {
                 X509Certificate2 newCertificate = new X509Certificate2(messageBytes);
                 certificatesToProcess.Add(newCertificate);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 // User call-out, catch-all OK
-                CommandProcessorBase.CheckForSevereException(e);
 
                 // Wasn't certificate data
                 return;
@@ -1355,10 +1364,9 @@ namespace System.Management.Automation
                     {
                         certificate = new X509Certificate2(path);
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
                         // User call-out, catch-all OK
-                        CommandProcessorBase.CheckForSevereException(e);
                         continue;
                     }
 
@@ -1557,7 +1565,7 @@ namespace System.Management.Automation
                 {
                     var processModule = PsUtils.GetMainModule(currentProcess);
                     hostname = string.Concat("PowerShell_", processModule.FileName, "_",
-                        ClrFacade.GetProcessModuleFileVersionInfo(processModule).ProductVersion);
+                        processModule.FileVersionInfo.ProductVersion);
                 }
                 catch (ComponentModel.Win32Exception)
                 {

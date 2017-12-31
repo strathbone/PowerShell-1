@@ -1,8 +1,8 @@
 Describe "SxS Module Path Basic Tests" -tags "CI" {
-    
+
     BeforeAll {
 
-        if ($IsWindows) 
+        if ($IsWindows)
         {
             $powershell = "$PSHOME\powershell.exe"
             $ProductName = "WindowsPowerShell"
@@ -32,18 +32,18 @@ Describe "SxS Module Path Basic Tests" -tags "CI" {
     }
 
     BeforeEach {
-        $originalModulePath = $env:PSMODULEPATH
+        $originalModulePath = $env:PSModulePath
     }
 
     AfterEach {
-        $env:PSMODULEPATH = $originalModulePath
+        $env:PSModulePath = $originalModulePath
     }
 
 
     It "validate sxs module path" {
 
-        $env:PSMODULEPATH = ""
-        $defaultModulePath = & $powershell -nopro -c '$env:PSMODULEPATH'
+        $env:PSModulePath = ""
+        $defaultModulePath = & $powershell -nopro -c '$env:PSModulePath'
 
         $paths = $defaultModulePath -split [System.IO.Path]::PathSeparator
 
@@ -64,8 +64,8 @@ Describe "SxS Module Path Basic Tests" -tags "CI" {
         try {
 
             ## PSHome module path derived from another powershell core instance should be ignored
-            $env:PSMODULEPATH = $fakePSHomeModuleDir
-            $newModulePath = & $powershell -nopro -c '$env:PSMODULEPATH'
+            $env:PSModulePath = $fakePSHomeModuleDir
+            $newModulePath = & $powershell -nopro -c '$env:PSModulePath'
             $paths = $newModulePath -split [System.IO.Path]::PathSeparator
 
             $paths.Count | Should Be 3
@@ -85,12 +85,27 @@ Describe "SxS Module Path Basic Tests" -tags "CI" {
 
         ## non-pshome module path derived from another powershell core instance should be preserved
         $customeModules = Join-Path -Path $TestDrive -ChildPath 'CustomModules'
-        $env:PSMODULEPATH = $fakePSHomeModuleDir, $customeModules -join ([System.IO.Path]::PathSeparator)
-        $newModulePath = & $powershell -nopro -c '$env:PSMODULEPATH'
+        $env:PSModulePath = $fakePSHomeModuleDir, $customeModules -join ([System.IO.Path]::PathSeparator)
+        $newModulePath = & $powershell -nopro -c '$env:PSModulePath'
         $paths = $newModulePath -split [System.IO.Path]::PathSeparator
 
         $paths.Count | Should Be 5
         $paths -contains $fakePSHomeModuleDir | Should Be $true
         $paths -contains $customeModules | Should Be $true
+    }
+
+    It "Default PowerShell profile appends Windows PowerShell PSModulePath only on Windows" {
+
+        $psmodulepath = & $powershell -nologo -c '$env:PSModulePath'
+
+        if ($IsWindows)
+        {
+            $psmodulepath[0] | Should Match "Warning"  # for Windows, there is a warning that path being appended
+            $psmodulepath[1] | Should Match "WindowsPowerShell"
+        }
+        else
+        {
+            $psmodulepath[0] | Should Not Match "WindowsPowerShell"
+        }
     }
 }

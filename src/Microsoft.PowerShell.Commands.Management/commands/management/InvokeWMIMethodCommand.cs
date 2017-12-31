@@ -19,7 +19,7 @@ namespace Microsoft.PowerShell.Commands
     /// <summary>
     /// A command to Invoke WMI Method
     /// </summary>
-    [Cmdlet("Invoke", "WmiMethod", DefaultParameterSetName = "class", SupportsShouldProcess = true,
+    [Cmdlet(VerbsLifecycle.Invoke, "WmiMethod", DefaultParameterSetName = "class", SupportsShouldProcess = true,
         HelpUri = "https://go.microsoft.com/fwlink/?LinkID=113346", RemotingCapability = RemotingCapability.OwnedByCommand)]
     public sealed class InvokeWmiMethod : WmiBaseCmdlet
     {
@@ -27,7 +27,7 @@ namespace Microsoft.PowerShell.Commands
         /// <summary>
         /// The WMI Object to use
         /// </summary>
-        /// 
+        ///
         [Parameter(ValueFromPipeline = true, Mandatory = true, ParameterSetName = "object")]
         public ManagementObject InputObject
         {

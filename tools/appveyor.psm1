@@ -3,7 +3,15 @@ $repoRoot = Join-Path $PSScriptRoot '..'
 $script:administratorsGroupSID = "S-1-5-32-544"
 $script:usersGroupSID = "S-1-5-32-545"
 
-Import-Module (Join-Path $repoRoot 'build.psm1')
+$dotNetPath = "$env:USERPROFILE\Appdata\Local\Microsoft\dotnet"
+if(Test-Path $dotNetPath)
+{
+    $env:PATH = $dotNetPath + ';' + $env:PATH
+}
+
+#import build into the global scope so it can be used by packaging
+Import-Module (Join-Path $repoRoot 'build.psm1') -Scope Global
+Import-Module (Join-Path $repoRoot 'tools\packaging')
 
 function New-LocalUser
 {
@@ -77,12 +85,21 @@ function Add-UserToGroup
 
 
 # tests if we should run a daily build
-# returns true if the build is scheduled 
+# returns true if the build is scheduled
 # or is a pushed tag
 Function Test-DailyBuild
 {
-    if(($env:PS_DAILY_BUILD -eq 'True') -or ($env:APPVEYOR_SCHEDULED_BUILD -eq 'True') -or ($env:APPVEYOR_REPO_TAG_NAME))
+    $trueString = 'True'
+    if(($env:PS_DAILY_BUILD -eq $trueString) -or ($env:APPVEYOR_SCHEDULED_BUILD -eq $trueString) -or ($env:APPVEYOR_REPO_TAG_NAME))
     {
+        return $true
+    }
+    
+    # if [Feature] is in the commit message,
+    # Run Daily tests
+    if($env:APPVEYOR_REPO_COMMIT_MESSAGE -match '\[feature\]')
+    {
+        Set-AppveyorBuildVariable -Name PS_DAILY_BUILD -Value $trueString
         return $true
     }
 
@@ -106,7 +123,7 @@ Function Set-BuildVariable
     {
         Set-AppveyorBuildVariable @PSBoundParameters
     }
-    else 
+    else
     {
         Set-Item env:/$name -Value $Value
     }
@@ -157,22 +174,46 @@ function Invoke-AppVeyorBuild
         $result.Warnings
         throw "Tags must be CI, Feature, Scenario, or Slow"
       }
-      Start-PSBuild -FullCLR
-      Start-PSBuild -CrossGen -Configuration $buildConfiguration
+
+      if(Test-DailyBuild)
+      {
+          Start-PSBuild -Configuration 'CodeCoverage' -PSModuleRestore
+      }
+
+      Start-PSBuild -CrossGen -PSModuleRestore -Configuration 'Release'
 }
 
 # Implements the AppVeyor 'install' step
 function Invoke-AppVeyorInstall
 {
+    # Make sure we have all the tags
+    Sync-PSTags -AddRemoteIfMissing
+    if($env:APPVEYOR_BUILD_NUMBER)
+    {
+        Update-AppveyorBuild -Version "$(Get-PSVersion -OmitCommitId)-$env:APPVEYOR_BUILD_NUMBER"
+    }
+
     if(Test-DailyBuild){
         $buildName = "[Daily]"
-        if($env:APPVEYOR_PULL_REQUEST_TITLE)
+
+        # Add daily to title if it's not already there
+        # It can be there already for rerun requests
+        if($env:APPVEYOR_PULL_REQUEST_TITLE -and $env:APPVEYOR_PULL_REQUEST_TITLE  -notmatch '^\[Daily\]')
         {
             $buildName += $env:APPVEYOR_PULL_REQUEST_TITLE
         }
+        elseif($env:APPVEYOR_PULL_REQUEST_TITLE)
+        {
+            $buildName = $env:APPVEYOR_PULL_REQUEST_TITLE
+        }
+        elseif($env:APPVEYOR_REPO_COMMIT_MESSAGE -notmatch '^\[Daily\].*$')
+        {
+            
+            $buildName += $env:APPVEYOR_REPO_COMMIT_MESSAGE
+        }
         else
         {
-            $buildName += $env:APPVEYOR_REPO_COMMIT_MESSAGE
+            $buildName = $env:APPVEYOR_REPO_COMMIT_MESSAGE
         }
 
         Update-AppveyorBuild -message $buildName
@@ -188,7 +229,7 @@ function Invoke-AppVeyorInstall
         # Password
         $randomObj = [System.Random]::new()
         $password = ""
-        1..(Get-Random -Minimum 15 -Maximum 126) | ForEach { $password = $password + [char]$randomObj.next(45,126) }
+        1..(Get-Random -Minimum 15 -Maximum 126) | ForEach-Object { $password = $password + [char]$randomObj.next(45,126) }
 
         # Account
         $userName = 'appVeyorRemote'
@@ -217,7 +258,7 @@ function Invoke-AppVeyorInstall
     }
 
     Set-BuildVariable -Name TestPassed -Value False
-    Start-PSBootstrap -Force
+    Start-PSBootstrap -Confirm:$false
 }
 
 # A wrapper to ensure that we upload test results
@@ -231,9 +272,9 @@ function Update-AppVeyorTestResults
 
     if($env:Appveyor)
     {
-        $retryCount = 0 
+        $retryCount = 0
         $pushedResults = $false
-        $pushedArtifacts = $false 
+        $pushedArtifacts = $false
         while( (!$pushedResults -or !$pushedResults) -and $retryCount -lt 3)
         {
             if($retryCount -gt 0)
@@ -265,30 +306,29 @@ function Update-AppVeyorTestResults
             Write-Warning "Failed to push all artifacts for $resultsFile"
         }
     }
-    else 
+    else
     {
         Write-Warning "Not running in appveyor, skipping upload of test results: $resultsFile"
     }
 }
 
 # Implement AppVeyor 'Test_script'
-function Invoke-AppVeyorTest 
+function Invoke-AppVeyorTest
 {
     [CmdletBinding()]
     param()
     #
     # CoreCLR
-    
-    $env:CoreOutput = Split-Path -Parent (Get-PSOutput -Options (New-PSOptions -Publish -Configuration $buildConfiguration))
+
+    $env:CoreOutput = Split-Path -Parent (Get-PSOutput -Options (New-PSOptions -Configuration 'Release'))
     Write-Host -Foreground Green 'Run CoreCLR tests'
     $testResultsNonAdminFile = "$pwd\TestsResultsNonAdmin.xml"
     $testResultsAdminFile = "$pwd\TestsResultsAdmin.xml"
-    $testResultsFileFullCLR = "$pwd\TestsResults.FullCLR.xml"
     if(!(Test-Path "$env:CoreOutput\powershell.exe"))
     {
         throw "CoreCLR PowerShell.exe was not built"
     }
-    
+
     if(-not (Test-DailyBuild))
     {
         # Pester doesn't allow Invoke-Pester -TagAll@('CI', 'RequireAdminOnWindows') currently
@@ -297,12 +337,18 @@ function Invoke-AppVeyorTest
         $ExcludeTag = @('Slow', 'Feature', 'Scenario')
         Write-Host -Foreground Green 'Running "CI" CoreCLR tests..'
     }
-    else 
+    else
     {
         $ExcludeTag = @()
         Write-Host -Foreground Green 'Running all CoreCLR tests..'
     }
-    
+
+    # Remove telemetry semaphore file in CI
+    $telemetrySemaphoreFilepath = Join-Path $env:CoreOutput DELETE_ME_TO_DISABLE_CONSOLEHOST_TELEMETRY
+    if ( Test-Path "${telemetrySemaphoreFilepath}" ) {
+        Remove-Item -Force ${telemetrySemaphoreFilepath}
+    }
+
     Start-PSPester -bindir $env:CoreOutput -outputFile $testResultsNonAdminFile -Unelevate -Tag @() -ExcludeTag ($ExcludeTag + @('RequireAdminOnWindows'))
     Write-Host -Foreground Green 'Upload CoreCLR Non-Admin test results'
     Update-AppVeyorTestResults -resultsFile $testResultsNonAdminFile
@@ -310,66 +356,98 @@ function Invoke-AppVeyorTest
     Start-PSPester -bindir $env:CoreOutput -outputFile $testResultsAdminFile -Tag @('RequireAdminOnWindows') -ExcludeTag $ExcludeTag
     Write-Host -Foreground Green 'Upload CoreCLR Admin test results'
     Update-AppVeyorTestResults -resultsFile $testResultsAdminFile
-    
-    #
-    # FullCLR
-    $env:FullOutput = Split-Path -Parent (Get-PSOutput -Options (New-PSOptions -FullCLR))
-    Write-Host -Foreground Green 'Run FullCLR tests'
-    Start-PSPester -FullCLR -bindir $env:FullOutput -outputFile $testResultsFileFullCLR -Tag $null -path 'test/fullCLR'
 
-    Write-Host -Foreground Green 'Upload FullCLR test results'
-    Update-AppVeyorTestResults -resultsFile $testResultsFileFullCLR
- 
     #
     # Fail the build, if tests failed
     @(
         $testResultsNonAdminFile,
-        $testResultsAdminFile,
-        $testResultsFileFullCLR
-    ) | % {
+        $testResultsAdminFile
+    ) | ForEach-Object {
         Test-PSPesterResults -TestResultsFile $_
     }
 
     Set-BuildVariable -Name TestPassed -Value True
 }
 
+#Implement AppVeyor 'after_test' phase
+function Invoke-AppVeyorAfterTest
+{
+    [CmdletBinding()]
+    param()
+
+    if(Test-DailyBuild)
+    {
+        ## Publish code coverage build, tests and OpenCover module to artifacts, so webhook has the information.
+        ## Build webhook is called after 'after_test' phase, hence we need to do this here and not in AppveyorFinish.
+        $codeCoverageOutput = Split-Path -Parent (Get-PSOutput -Options (New-PSOptions -Configuration CodeCoverage))
+        $codeCoverageArtifacts = Compress-CoverageArtifacts -CodeCoverageOutput $codeCoverageOutput
+
+        Write-Host -ForegroundColor Green 'Upload CodeCoverage artifacts'
+        $codeCoverageArtifacts | ForEach-Object { Push-AppveyorArtifact $_ }
+    }
+}
+
+function Compress-CoverageArtifacts
+{
+    param([string] $CodeCoverageOutput)
+
+    # Create archive for test content, OpenCover module and CodeCoverage build
+    $artifacts = New-Object System.Collections.ArrayList
+
+    $zipTestContentPath = Join-Path $pwd 'tests.zip'
+    Compress-TestContent -Destination $zipTestContentPath
+    $null = $artifacts.Add($zipTestContentPath)
+
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $resolvedPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath((Join-Path $PSScriptRoot '..\test\tools\OpenCover'))
+    $zipOpenCoverPath = Join-Path $pwd 'OpenCover.zip'
+    [System.IO.Compression.ZipFile]::CreateFromDirectory($resolvedPath, $zipOpenCoverPath)
+    $null = $artifacts.Add($zipOpenCoverPath)
+
+    $zipCodeCoveragePath = Join-Path $pwd "CodeCoverage.zip"
+    Write-Verbose "Zipping ${CodeCoverageOutput} into $zipCodeCoveragePath" -verbose
+    [System.IO.Compression.ZipFile]::CreateFromDirectory($CodeCoverageOutput, $zipCodeCoveragePath)
+    $null = $artifacts.Add($zipCodeCoveragePath)
+
+    return $artifacts
+}
+
+function Get-PackageName
+{
+    $name = git describe
+    # Remove 'v' from version, prepend 'PowerShell' - to be consistent with other package names
+    $name = $name -replace 'v',''
+    $name = 'PowerShell_' + $name
+    return $name
+}
+
 # Implements AppVeyor 'on_finish' step
 function Invoke-AppveyorFinish
 {
     try {
+        $packageParams = @{}
+        if($env:APPVEYOR_BUILD_VERSION)
+        {
+            $packageParams += @{Version=$env:APPVEYOR_BUILD_VERSION}
+        }
+
         # Build packages
-        $packages = Start-PSPackage
+        $packages = Start-PSPackage @packageParams -SkipReleaseChecks
 
-        # Creating project artifact
-        $name = git describe
-
-        # Remove 'v' from version, append 'PowerShell' - to be consistent with other package names
-        $name = $name -replace 'v',''
-        $name = 'PowerShell_' + $name
+        $name = Get-PackageName
 
         $zipFilePath = Join-Path $pwd "$name.zip"
-        $zipFileFullPath = Join-Path $pwd "$name.FullCLR.zip"
+
         Add-Type -assemblyname System.IO.Compression.FileSystem
         Write-Verbose "Zipping ${env:CoreOutput} into $zipFilePath" -verbose
         [System.IO.Compression.ZipFile]::CreateFromDirectory($env:CoreOutput, $zipFilePath)
-        Write-Verbose "Zipping ${env:FullOutput} into $zipFileFullPath" -verbose
-        [System.IO.Compression.ZipFile]::CreateFromDirectory($env:FullOutput, $zipFileFullPath)
 
         $artifacts = New-Object System.Collections.ArrayList
         foreach ($package in $packages) {
-            $artifacts.Add($package)
+            $null = $artifacts.Add($package)
         }
 
-        $artifacts.Add($zipFilePath)
-        $artifacts.Add($zipFileFullPath)
-
-        # Create archive for test content
-        if(Test-DailyBuild) 
-        {
-            $zipTestContentPath = Join-Path $pwd 'tests.zip' 
-            Compress-TestContent -Destination $zipTestContentPath
-            $artifacts.Add($zipTestContentPath)
-        }
+        $null = $artifacts.Add($zipFilePath)
 
         if ($env:APPVEYOR_REPO_TAG_NAME)
         {
@@ -393,10 +471,15 @@ function Invoke-AppveyorFinish
             Publish-NuGetFeed -OutputPath .\nuget-artifacts -VersionSuffix $preReleaseVersion
         }
 
-        $artifacts += (Get-ChildItem .\nuget-artifacts -ErrorAction SilentlyContinue | ForEach-Object {$_.FullName})
+        $nugetArtifacts = Get-ChildItem .\nuget-artifacts -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName }
+
+        if($nugetArtifacts)
+        {
+            $artifacts.AddRange($nugetArtifacts)
+        }
 
         $pushedAllArtifacts = $true
-        $artifacts | ForEach-Object { 
+        $artifacts | ForEach-Object {
             Write-Host "Pushing $_ as Appveyor artifact"
             if(Test-Path $_)
             {
@@ -410,12 +493,18 @@ function Invoke-AppveyorFinish
                 $pushedAllArtifacts = $false
                 Write-Warning "Artifact $_ does not exist."
             }
+
+            if($env:NUGET_KEY -and $env:NUGET_URL -and [system.io.path]::GetExtension($_) -ieq '.nupkg')
+            {
+                log "pushing $_ to $env:NUGET_URL"
+                Start-NativeExecution -sb {dotnet nuget push $_ --api-key $env:NUGET_KEY --source "$env:NUGET_URL/api/v2/package"} -IgnoreExitcode
+            }            
         }
         if(!$pushedAllArtifacts)
         {
             throw "Some artifacts did not exist!"
         }
-    } 
+    }
     catch {
         Write-Host -Foreground Red $_
     }

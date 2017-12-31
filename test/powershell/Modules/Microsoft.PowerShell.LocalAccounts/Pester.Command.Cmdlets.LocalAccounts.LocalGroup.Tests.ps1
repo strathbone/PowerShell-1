@@ -2,10 +2,15 @@
 #
 # Copyright (c) Microsoft Corporation, 2015
 
+# Module removed due to #4272
+# disabling tests
+
+return
+
 function RemoveTestGroups
 {
     param([string] $basename)
-   
+
     $results = Get-LocalGroup $basename*
     foreach ($element in $results) {
         Remove-LocalGroup -SID $element.SID
@@ -43,7 +48,7 @@ try {
     Describe "Verify Expected LocalGroup Cmdlets are present" -Tags "CI" {
 
         It "Test command presence" {
-            $result = Get-Command -Module Microsoft.PowerShell.LocalAccounts | % Name
+            $result = Get-Command -Module Microsoft.PowerShell.LocalAccounts | ForEach-Object Name
 
             $result -contains "New-LocalGroup" | Should Be $true
             $result -contains "Set-LocalGroup" | Should Be $true
@@ -248,7 +253,7 @@ try {
     }
 
     Describe "Validate Get-LocalGroup cmdlet" -Tags @('Feature', 'RequireAdminOnWindows') {
-       
+
         BeforeAll {
             if ($IsNotSkipped) {
                 New-LocalGroup -Name TestGroupGet1 -Description "Test Group Get 1 Description" | Out-Null
@@ -328,7 +333,7 @@ try {
                 $result = @($outErr.Count, $outErr[0].ErrorRecord.CategoryInfo.Reason, $outOut.Name)
             }
 
-            if ($result -eq $null)
+            if ($null -eq $result)
             {
                 # Force failing the test because an unexpected outcome occurred
                 $false | Should Be $true
@@ -356,7 +361,7 @@ try {
             }
             VerifyFailingTest $sb "GroupNotFound,Microsoft.PowerShell.Commands.GetLocalGroupCommand"
         }
-       
+
         It "Can get no local groups if none match wildcard" {
             $localGroupName = 'TestGroupGetNameThatDoesntExist'
             $result = (Get-LocalGroup $localGroupName*).Count

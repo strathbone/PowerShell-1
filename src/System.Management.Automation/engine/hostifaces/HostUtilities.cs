@@ -12,12 +12,6 @@ using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Globalization;
-#if CORECLR
-// Some APIs are missing from System.Environment. We use System.Management.Automation.Environment as a proxy type:
-//  - for missing APIs, System.Management.Automation.Environment has extension implementation.
-//  - for existing APIs, System.Management.Automation.Environment redirect the call to System.Environment.
-using Environment = System.Management.Automation.Environment;
-#endif
 
 namespace System.Management.Automation
 {
@@ -42,7 +36,7 @@ namespace System.Management.Automation
             param()
 
             $foundSuggestion = $false
-        
+
             if($lastError -and
                 ($lastError.Exception -is ""System.Management.Automation.CommandNotFoundException""))
             {
@@ -380,11 +374,9 @@ namespace System.Management.Automation
                     {
                         result = invocationModule.Invoke(evaluator, null);
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
                         // Catch-all OK. This is a third-party call-out.
-                        CommandProcessorBase.CheckForSevereException(e);
-
                         suggestion["Enabled"] = false;
                         continue;
                     }
@@ -579,11 +571,9 @@ namespace System.Management.Automation
                 {
                     result = invocationModule.Invoke(suggestionScript, suggestionArgs);
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     // Catch-all OK. This is a third-party call-out.
-                    CommandProcessorBase.CheckForSevereException(e);
-
                     return String.Empty;
                 }
 
@@ -835,7 +825,7 @@ namespace System.Management.Automation
             string configurationName,
             PSHost host)
         {
-            // Create a loop-back remote runspace with network access enabled, and 
+            // Create a loop-back remote runspace with network access enabled, and
             // with the provided endpoint configurationname.
             TypeTable typeTable = TypeTable.LoadDefaultTypeFiles();
             var connectInfo = new WSManConnectionInfo();
@@ -850,8 +840,6 @@ namespace System.Management.Automation
             }
             catch (Exception e)
             {
-                CommandProcessorBase.CheckForSevereException(e);
-
                 throw new PSInvalidOperationException(
                     StringUtil.Format(RemotingErrorIdStrings.CannotCreateConfiguredRunspace, configurationName),
                     e);
@@ -867,16 +855,16 @@ namespace System.Management.Automation
         #region Runspace Invoke
 
         /// <summary>
-        /// Helper method to invoke a PSCommand on a given runspace.  This method correctly invokes the command for 
+        /// Helper method to invoke a PSCommand on a given runspace.  This method correctly invokes the command for
         /// these runspace cases:
         ///   1. Local runspace.  If the local runspace is busy it will invoke as a nested command.
         ///   2. Remote runspace.
         ///   3. Runspace that is stopped in the debugger at a breakpoint.
-        ///   
+        ///
         /// Error and information streams are ignored and only the command result output is returned.
-        /// 
-        /// This method is NOT thread safe.  It does not support running commands from different threads on the 
-        /// provided runspace.  It assumes the thread invoking this method is the same that runs all other 
+        ///
+        /// This method is NOT thread safe.  It does not support running commands from different threads on the
+        /// provided runspace.  It assumes the thread invoking this method is the same that runs all other
         /// commands on the provided runspace.
         /// </summary>
         /// <param name="runspace">Runspace to invoke the command on</param>
@@ -935,7 +923,7 @@ namespace System.Management.Automation
 
             foreach ($file in $FileName)
             {
-                dir $file -File | foreach {
+                Get-ChildItem $file -File | ForEach-Object {
                     $filePathName = $_.FullName
 
                     # Get file contents

@@ -4,13 +4,7 @@ Copyright (c) Microsoft Corporation.  All rights reserved.
 
 using System.Runtime.Serialization;
 using System.Reflection;
-
-#if CORECLR
-// Use stubs for SystemException, SerializationInfo and SecurityPermissionAttribute 
-using Microsoft.PowerShell.CoreClr.Stubs;
-#else
 using System.Security.Permissions;
-#endif
 
 namespace System.Management.Automation.Runspaces
 {
@@ -19,19 +13,14 @@ namespace System.Management.Automation.Runspaces
     /// </summary>
     /// <!--
     /// RunspaceConfigurationTypeException is the exception to be thrown when there is no
-    /// help found for a topic. 
-    /// 
-    /// Implementation of RunspaceConfigurationTypeException requires it to 
-    ///     1. Implement IContainsErrorRecord, 
+    /// help found for a topic.
+    ///
+    /// Implementation of RunspaceConfigurationTypeException requires it to
+    ///     1. Implement IContainsErrorRecord,
     ///     2. ISerializable
     /// -->
     [Serializable]
-#if CORECLR
-    internal
-#else
-    public
-#endif
-    class RunspaceConfigurationTypeException : SystemException, IContainsErrorRecord
+    internal class RunspaceConfigurationTypeException : SystemException, IContainsErrorRecord
     {
         /// <summary>
         /// Initiate an instance for RunspaceConfigurationTypeException
@@ -137,7 +126,7 @@ namespace System.Management.Automation.Runspaces
         }
 
         /// <summary>
-        /// Get message for this exception. 
+        /// Get message for this exception.
         /// </summary>
         public override string Message
         {
@@ -155,7 +144,7 @@ namespace System.Management.Automation.Runspaces
         #region Serialization
 
         /// <summary>
-        /// Initiate a RunspaceConfigurationAttributeException instance. 
+        /// Initiate a RunspaceConfigurationAttributeException instance.
         /// </summary>
         /// <param name="info"> Serialization information </param>
         /// <param name="context"> Streaming context </param>

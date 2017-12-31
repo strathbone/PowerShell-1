@@ -25,6 +25,14 @@ namespace Microsoft.PowerShell.Commands
         /// </summary>
         public new string Content { get; private set; }
 
+        /// <summary>
+        /// Gets the Encoding that was used to decode the Content
+        /// </summary>
+        /// <value>
+        /// The Encoding used to decode the Content; otherwise, a null reference if the content is not text.
+        /// </value>
+        public Encoding Encoding { get; private set; }
+
         private WebCmdletElementCollection _inputFields;
 
         /// <summary>
@@ -177,7 +185,7 @@ namespace Microsoft.PowerShell.Commands
             // We might get an empty input for a directive from the HTML file
             if (!string.IsNullOrEmpty(outerHtml))
             {
-                // Extract just the opening tag of the HTML element (omitting the closing tag and any contents, 
+                // Extract just the opening tag of the HTML element (omitting the closing tag and any contents,
                 // including contained HTML elements)
                 var match = s_tagRegex.Match(outerHtml);
 
@@ -217,14 +225,16 @@ namespace Microsoft.PowerShell.Commands
         /// <summary>
         /// Reads the response content from the web response.
         /// </summary>
-        private void InitializeContent()
+        protected void InitializeContent()
         {
             string contentType = ContentHelper.GetContentType(BaseResponse);
             if (ContentHelper.IsText(contentType))
             {
+                Encoding encoding = null;
                 // fill the Content buffer
                 string characterSet = WebResponseHelper.GetCharacterSet(BaseResponse);
-                this.Content = StreamHelper.DecodeStream(RawContentStream, characterSet);
+                this.Content = StreamHelper.DecodeStream(RawContentStream, characterSet, out encoding);
+                this.Encoding = encoding;
             }
             else
             {

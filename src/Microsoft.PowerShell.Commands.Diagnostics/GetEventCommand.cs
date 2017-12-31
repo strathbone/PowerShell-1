@@ -1,6 +1,6 @@
 //
 // Copyright (c) 2007 Microsoft Corporation. All rights reserved.
-// 
+//
 
 using System;
 using System.Xml;
@@ -22,9 +22,9 @@ using System.Text;
 
 namespace Microsoft.PowerShell.Commands
 {
-    /// 
+    ///
     /// Class that implements the Get-WinEvent cmdlet.
-    /// 
+    ///
     [Cmdlet(VerbsCommon.Get, "WinEvent", DefaultParameterSetName = "GetLogSet", HelpUri = "https://go.microsoft.com/fwlink/?LinkID=138336")]
     public sealed class GetWinEventCommand : PSCmdlet
     {
@@ -514,33 +514,29 @@ namespace Microsoft.PowerShell.Commands
         //
         private void ProcessGetLog()
         {
-            EventLogSession eventLogSession = CreateSession();
-
-            FindLogNamesMatchingWildcards(eventLogSession, _accumulatedLogNames);
-            if (_logNamesMatchingWildcard.Count == 0)
+            using (EventLogSession eventLogSession = CreateSession())
             {
-                return;
-            }
+                FindLogNamesMatchingWildcards(eventLogSession, _accumulatedLogNames);
+                if (_logNamesMatchingWildcard.Count == 0)
+                {
+                    return;
+                }
 
-            EventLogQuery logQuery;
-            if (_logNamesMatchingWildcard.Count > 1)
-            {
-                string query = BuildStructuredQuery(eventLogSession);
-                logQuery = new EventLogQuery(null, PathType.LogName, query);
-                logQuery.TolerateQueryErrors = true;
-            }
-            else
-            {
-                logQuery = new EventLogQuery(_logNamesMatchingWildcard[0], PathType.LogName, _filter);
-            }
-            logQuery.Session = eventLogSession;
-            logQuery.ReverseDirection = !_oldest;
+                EventLogQuery logQuery;
+                if (_logNamesMatchingWildcard.Count > 1)
+                {
+                    string query = BuildStructuredQuery(eventLogSession);
+                    logQuery = new EventLogQuery(null, PathType.LogName, query);
+                    logQuery.TolerateQueryErrors = true;
+                }
+                else
+                {
+                    logQuery = new EventLogQuery(_logNamesMatchingWildcard[0], PathType.LogName, _filter);
+                }
+                logQuery.Session = eventLogSession;
+                logQuery.ReverseDirection = !_oldest;
 
-            EventLogReader readerObj = new EventLogReader(logQuery);
-
-            if (readerObj != null)
-            {
-                ReadEvents(readerObj);
+                ReadEvents(logQuery);
             }
         }
 
@@ -550,44 +546,41 @@ namespace Microsoft.PowerShell.Commands
         //
         private void ProcessGetProvider()
         {
-            EventLogSession eventLogSession = CreateSession();
-
-            FindProvidersByLogForWildcardPatterns(eventLogSession, _providerName);
-
-            if (_providersByLogMap.Count == 0)
+            using (EventLogSession eventLogSession = CreateSession())
             {
-                //
-                // Just return: errors already written above for each unmatched provider name pattern.
-                //
-                return;
-            }
+                FindProvidersByLogForWildcardPatterns(eventLogSession, _providerName);
 
-
-            EventLogQuery logQuery = null;
-            if (_providersByLogMap.Count > 1)
-            {
-                string query = BuildStructuredQuery(eventLogSession);
-                logQuery = new EventLogQuery(null, PathType.LogName, query);
-                logQuery.TolerateQueryErrors = true;
-            }
-            else
-            {
-                //
-                // There's only one key at this point, but we need an enumerator to get to it.
-                //
-                foreach (string log in _providersByLogMap.Keys)
+                if (_providersByLogMap.Count == 0)
                 {
-                    logQuery = new EventLogQuery(log, PathType.LogName, AddProviderPredicatesToFilter(_providersByLogMap[log]));
-                    WriteVerbose(string.Format(CultureInfo.InvariantCulture, "Log {0} will be queried", log));
+                    //
+                    // Just return: errors already written above for each unmatched provider name pattern.
+                    //
+                    return;
                 }
-            }
-            logQuery.Session = eventLogSession;
-            logQuery.ReverseDirection = !_oldest; ;
 
-            EventLogReader readerObj = new EventLogReader(logQuery);
-            if (readerObj != null)
-            {
-                ReadEvents(readerObj);
+
+                EventLogQuery logQuery = null;
+                if (_providersByLogMap.Count > 1)
+                {
+                    string query = BuildStructuredQuery(eventLogSession);
+                    logQuery = new EventLogQuery(null, PathType.LogName, query);
+                    logQuery.TolerateQueryErrors = true;
+                }
+                else
+                {
+                    //
+                    // There's only one key at this point, but we need an enumerator to get to it.
+                    //
+                    foreach (string log in _providersByLogMap.Keys)
+                    {
+                        logQuery = new EventLogQuery(log, PathType.LogName, AddProviderPredicatesToFilter(_providersByLogMap[log]));
+                        WriteVerbose(string.Format(CultureInfo.InvariantCulture, "Log {0} will be queried", log));
+                    }
+                }
+                logQuery.Session = eventLogSession;
+                logQuery.ReverseDirection = !_oldest; ;
+
+                ReadEvents(logQuery);
             }
         }
 
@@ -597,66 +590,67 @@ namespace Microsoft.PowerShell.Commands
         //
         private void ProcessListLog()
         {
-            EventLogSession eventLogSession = CreateSession();
-
-            foreach (string logPattern in _listLog)
+            using (EventLogSession eventLogSession = CreateSession())
             {
-                bool bMatchFound = false;
-
-                foreach (string logName in eventLogSession.GetLogNames())
+                foreach (string logPattern in _listLog)
                 {
-                    WildcardPattern wildLogPattern = new WildcardPattern(logPattern, WildcardOptions.IgnoreCase);
+                    bool bMatchFound = false;
 
-                    if (((!WildcardPattern.ContainsWildcardCharacters(logPattern))
-                        && string.Equals(logPattern, logName, StringComparison.CurrentCultureIgnoreCase))
-                        ||
-                        (wildLogPattern.IsMatch(logName)))
+                    foreach (string logName in eventLogSession.GetLogNames())
                     {
-                        try
-                        {
-                            EventLogConfiguration logObj = new EventLogConfiguration(logName, eventLogSession);
+                        WildcardPattern wildLogPattern = new WildcardPattern(logPattern, WildcardOptions.IgnoreCase);
 
-                            //
-                            // Skip direct channels matching the wildcard unless -Force is present.
-                            //
-                            if (!Force.IsPresent &&
-                                WildcardPattern.ContainsWildcardCharacters(logPattern) &&
-                                    (logObj.LogType == EventLogType.Debug ||
-                                     logObj.LogType == EventLogType.Analytical))
+                        if (((!WildcardPattern.ContainsWildcardCharacters(logPattern))
+                            && string.Equals(logPattern, logName, StringComparison.CurrentCultureIgnoreCase))
+                            ||
+                            (wildLogPattern.IsMatch(logName)))
+                        {
+                            try
                             {
+                                EventLogConfiguration logObj = new EventLogConfiguration(logName, eventLogSession);
+
+                                //
+                                // Skip direct channels matching the wildcard unless -Force is present.
+                                //
+                                if (!Force.IsPresent &&
+                                    WildcardPattern.ContainsWildcardCharacters(logPattern) &&
+                                        (logObj.LogType == EventLogType.Debug ||
+                                        logObj.LogType == EventLogType.Analytical))
+                                {
+                                    continue;
+                                }
+
+                                EventLogInformation logInfoObj = eventLogSession.GetLogInformation(logName, PathType.LogName);
+
+                                PSObject outputObj = new PSObject(logObj);
+
+                                outputObj.Properties.Add(new PSNoteProperty("FileSize", logInfoObj.FileSize));
+                                outputObj.Properties.Add(new PSNoteProperty("IsLogFull", logInfoObj.IsLogFull));
+                                outputObj.Properties.Add(new PSNoteProperty("LastAccessTime", logInfoObj.LastAccessTime));
+                                outputObj.Properties.Add(new PSNoteProperty("LastWriteTime", logInfoObj.LastWriteTime));
+                                outputObj.Properties.Add(new PSNoteProperty("OldestRecordNumber", logInfoObj.OldestRecordNumber));
+                                outputObj.Properties.Add(new PSNoteProperty("RecordCount", logInfoObj.RecordCount));
+
+                                WriteObject(outputObj);
+                                bMatchFound = true;
+                            }
+                            catch (Exception exc)
+                            {
+                                string msg = string.Format(CultureInfo.InvariantCulture,
+                                                        _resourceMgr.GetString("LogInfoUnavailable"),
+                                                        logName, exc.Message);
+                                Exception outerExc = new Exception(msg, exc);
+                                WriteError(new ErrorRecord(outerExc, "LogInfoUnavailable", ErrorCategory.NotSpecified, null));
                                 continue;
                             }
-
-                            EventLogInformation logInfoObj = eventLogSession.GetLogInformation(logName, PathType.LogName);
-
-                            PSObject outputObj = new PSObject(logObj);
-
-                            outputObj.Properties.Add(new PSNoteProperty("FileSize", logInfoObj.FileSize));
-                            outputObj.Properties.Add(new PSNoteProperty("IsLogFull", logInfoObj.IsLogFull));
-                            outputObj.Properties.Add(new PSNoteProperty("LastAccessTime", logInfoObj.LastAccessTime));
-                            outputObj.Properties.Add(new PSNoteProperty("LastWriteTime", logInfoObj.LastWriteTime));
-                            outputObj.Properties.Add(new PSNoteProperty("OldestRecordNumber", logInfoObj.OldestRecordNumber));
-                            outputObj.Properties.Add(new PSNoteProperty("RecordCount", logInfoObj.RecordCount));
-
-                            WriteObject(outputObj);
-                            bMatchFound = true;
-                        }
-                        catch (Exception exc)
-                        {
-                            string msg = string.Format(CultureInfo.InvariantCulture,
-                                                     _resourceMgr.GetString("LogInfoUnavailable"),
-                                                     logName, exc.Message);
-                            Exception outerExc = new Exception(msg, exc);
-                            WriteError(new ErrorRecord(outerExc, "LogInfoUnavailable", ErrorCategory.NotSpecified, null));
-                            continue;
                         }
                     }
-                }
-                if (!bMatchFound)
-                {
-                    string msg = _resourceMgr.GetString("NoMatchingLogsFound");
-                    Exception exc = new Exception(string.Format(CultureInfo.InvariantCulture, msg, _computerName, logPattern));
-                    WriteError(new ErrorRecord(exc, "NoMatchingLogsFound", ErrorCategory.ObjectNotFound, null));
+                    if (!bMatchFound)
+                    {
+                        string msg = _resourceMgr.GetString("NoMatchingLogsFound");
+                        Exception exc = new Exception(string.Format(CultureInfo.InvariantCulture, msg, _computerName, logPattern));
+                        WriteError(new ErrorRecord(exc, "NoMatchingLogsFound", ErrorCategory.ObjectNotFound, null));
+                    }
                 }
             }
         }
@@ -666,45 +660,46 @@ namespace Microsoft.PowerShell.Commands
         //
         private void ProcessListProvider()
         {
-            EventLogSession eventLogSession = CreateSession();
-
-            foreach (string provPattern in _listProvider)
+            using (EventLogSession eventLogSession = CreateSession())
             {
-                bool bMatchFound = false;
-
-                foreach (string provName in eventLogSession.GetProviderNames())
+                foreach (string provPattern in _listProvider)
                 {
-                    WildcardPattern wildProvPattern = new WildcardPattern(provPattern, WildcardOptions.IgnoreCase);
+                    bool bMatchFound = false;
 
-                    if (((!WildcardPattern.ContainsWildcardCharacters(provPattern))
-                        && string.Equals(provPattern, provName, StringComparison.CurrentCultureIgnoreCase))
-                        ||
-                        (wildProvPattern.IsMatch(provName)))
+                    foreach (string provName in eventLogSession.GetProviderNames())
                     {
-                        try
+                        WildcardPattern wildProvPattern = new WildcardPattern(provPattern, WildcardOptions.IgnoreCase);
+
+                        if (((!WildcardPattern.ContainsWildcardCharacters(provPattern))
+                            && string.Equals(provPattern, provName, StringComparison.CurrentCultureIgnoreCase))
+                            ||
+                            (wildProvPattern.IsMatch(provName)))
                         {
-                            ProviderMetadata provObj = new ProviderMetadata(provName, eventLogSession, CultureInfo.CurrentCulture);
-                            WriteObject(provObj);
-                            bMatchFound = true;
-                        }
-                        catch (System.Diagnostics.Eventing.Reader.EventLogException exc)
-                        {
-                            string msg = string.Format(CultureInfo.InvariantCulture,
-                                                       _resourceMgr.GetString("ProviderMetadataUnavailable"),
-                                                       provName, exc.Message);
-                            Exception outerExc = new Exception(msg, exc);
-                            WriteError(new ErrorRecord(outerExc, "ProviderMetadataUnavailable", ErrorCategory.NotSpecified, null));
-                            continue;
+                            try
+                            {
+                                ProviderMetadata provObj = new ProviderMetadata(provName, eventLogSession, CultureInfo.CurrentCulture);
+                                WriteObject(provObj);
+                                bMatchFound = true;
+                            }
+                            catch (System.Diagnostics.Eventing.Reader.EventLogException exc)
+                            {
+                                string msg = string.Format(CultureInfo.InvariantCulture,
+                                                        _resourceMgr.GetString("ProviderMetadataUnavailable"),
+                                                        provName, exc.Message);
+                                Exception outerExc = new Exception(msg, exc);
+                                WriteError(new ErrorRecord(outerExc, "ProviderMetadataUnavailable", ErrorCategory.NotSpecified, null));
+                                continue;
+                            }
                         }
                     }
-                }
 
-                if (!bMatchFound)
-                {
-                    string msg = string.Format(CultureInfo.InvariantCulture, _resourceMgr.GetString("NoMatchingProvidersFound"),
-                                             _computerName, provPattern);
-                    Exception exc = new Exception(msg);
-                    WriteError(new ErrorRecord(exc, "NoMatchingProvidersFound", ErrorCategory.ObjectNotFound, null));
+                    if (!bMatchFound)
+                    {
+                        string msg = string.Format(CultureInfo.InvariantCulture, _resourceMgr.GetString("NoMatchingProvidersFound"),
+                                                _computerName, provPattern);
+                        Exception exc = new Exception(msg);
+                        WriteError(new ErrorRecord(exc, "NoMatchingProvidersFound", ErrorCategory.ObjectNotFound, null));
+                    }
                 }
             }
         }
@@ -714,43 +709,40 @@ namespace Microsoft.PowerShell.Commands
         //
         private void ProcessFilterXml()
         {
-            EventLogSession eventLogSession = CreateSession();
-
-            if (!Oldest.IsPresent)
+            using (EventLogSession eventLogSession = CreateSession())
             {
-                //
-                // Do minimal parsing of xmlQuery to determine if any direct channels or ETL files are in it.        
-                //
-                XmlElement root = _xmlQuery.DocumentElement;
-                XmlNodeList queryNodes = root.SelectNodes("//Query//Select");
-                foreach (XmlNode queryNode in queryNodes)
+                if (!Oldest.IsPresent)
                 {
-                    XmlAttributeCollection attribs = queryNode.Attributes;
-                    foreach (XmlAttribute attrib in attribs)
+                    //
+                    // Do minimal parsing of xmlQuery to determine if any direct channels or ETL files are in it.
+                    //
+                    XmlElement root = _xmlQuery.DocumentElement;
+                    XmlNodeList queryNodes = root.SelectNodes("//Query//Select");
+                    foreach (XmlNode queryNode in queryNodes)
                     {
-                        if (attrib.Name.Equals("Path", StringComparison.OrdinalIgnoreCase))
+                        XmlAttributeCollection attribs = queryNode.Attributes;
+                        foreach (XmlAttribute attrib in attribs)
                         {
-                            string logName = attrib.Value;
-
-                            if (logName.StartsWith(filePrefix, StringComparison.OrdinalIgnoreCase))
+                            if (attrib.Name.Equals("Path", StringComparison.OrdinalIgnoreCase))
                             {
-                                TerminateForNonEvtxFileWithoutOldest(logName);
-                            }
+                                string logName = attrib.Value;
 
-                            ValidateLogName(logName, eventLogSession);
+                                if (logName.StartsWith(filePrefix, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    TerminateForNonEvtxFileWithoutOldest(logName);
+                                }
+
+                                ValidateLogName(logName, eventLogSession);
+                            }
                         }
                     }
                 }
-            }
 
-            EventLogQuery logQuery = new EventLogQuery(null, PathType.LogName, _xmlQuery.InnerXml);
-            logQuery.Session = eventLogSession;
-            logQuery.ReverseDirection = !_oldest;
+                EventLogQuery logQuery = new EventLogQuery(null, PathType.LogName, _xmlQuery.InnerXml);
+                logQuery.Session = eventLogSession;
+                logQuery.ReverseDirection = !_oldest;
 
-            EventLogReader readerObj = new EventLogReader(logQuery);
-            if (readerObj != null)
-            {
-                ReadEvents(readerObj);
+                ReadEvents(logQuery);
             }
         }
 
@@ -760,44 +752,41 @@ namespace Microsoft.PowerShell.Commands
         //
         private void ProcessFile()
         {
-            EventLogSession eventLogSession = CreateSession();
-
-            //
-            // At this point, _path array contains paths that might have wildcards,
-            // environment variables or PS drives. Let's resolve those.        
-            //
-            for (int i = 0; i < _path.Length; i++)
+            using (EventLogSession eventLogSession = CreateSession())
             {
-                StringCollection resolvedPaths = ValidateAndResolveFilePath(_path[i]);
-                foreach (string resolvedPath in resolvedPaths)
+                //
+                // At this point, _path array contains paths that might have wildcards,
+                // environment variables or PS drives. Let's resolve those.
+                //
+                for (int i = 0; i < _path.Length; i++)
                 {
-                    _resolvedPaths.Add(resolvedPath);
-                    WriteVerbose(string.Format(CultureInfo.InvariantCulture, "Found file {0}", resolvedPath));
+                    StringCollection resolvedPaths = ValidateAndResolveFilePath(_path[i]);
+                    foreach (string resolvedPath in resolvedPaths)
+                    {
+                        _resolvedPaths.Add(resolvedPath);
+                        WriteVerbose(string.Format(CultureInfo.InvariantCulture, "Found file {0}", resolvedPath));
+                    }
                 }
-            }
 
-            EventLogQuery logQuery = null;
-            if (_resolvedPaths.Count == 0)
-            {
-                return;
-            }
-            else if (_resolvedPaths.Count > 1)
-            {
-                string query = BuildStructuredQuery(eventLogSession);
-                logQuery = new EventLogQuery(null, PathType.FilePath, query);
-                logQuery.TolerateQueryErrors = true;
-            }
-            else
-            {
-                logQuery = new EventLogQuery(_resolvedPaths[0], PathType.FilePath, _filter);
-            }
-            logQuery.Session = eventLogSession;
-            logQuery.ReverseDirection = !_oldest;
+                EventLogQuery logQuery = null;
+                if (_resolvedPaths.Count == 0)
+                {
+                    return;
+                }
+                else if (_resolvedPaths.Count > 1)
+                {
+                    string query = BuildStructuredQuery(eventLogSession);
+                    logQuery = new EventLogQuery(null, PathType.FilePath, query);
+                    logQuery.TolerateQueryErrors = true;
+                }
+                else
+                {
+                    logQuery = new EventLogQuery(_resolvedPaths[0], PathType.FilePath, _filter);
+                }
+                logQuery.Session = eventLogSession;
+                logQuery.ReverseDirection = !_oldest;
 
-            EventLogReader readerObj = new EventLogReader(logQuery);
-            if (readerObj != null)
-            {
-                ReadEvents(readerObj);
+                ReadEvents(logQuery);
             }
         }
 
@@ -808,23 +797,21 @@ namespace Microsoft.PowerShell.Commands
         {
             CheckHashTablesForNullValues();
 
-            EventLogSession eventLogSession = CreateSession();
-
-            string query = BuildStructuredQuery(eventLogSession);
-            if (query.Length == 0)
+            using (EventLogSession eventLogSession = CreateSession())
             {
-                return;
-            }
 
-            EventLogQuery logQuery = new EventLogQuery(null, PathType.FilePath, query);
-            logQuery.Session = eventLogSession;
-            logQuery.TolerateQueryErrors = true;
-            logQuery.ReverseDirection = !_oldest;
+                string query = BuildStructuredQuery(eventLogSession);
+                if (query.Length == 0)
+                {
+                    return;
+                }
 
-            EventLogReader readerObj = new EventLogReader(logQuery);
-            if (readerObj != null)
-            {
-                ReadEvents(readerObj);
+                EventLogQuery logQuery = new EventLogQuery(null, PathType.FilePath, query);
+                logQuery.Session = eventLogSession;
+                logQuery.TolerateQueryErrors = true;
+                logQuery.ReverseDirection = !_oldest;
+
+                ReadEvents(logQuery);
             }
         }
 
@@ -839,7 +826,7 @@ namespace Microsoft.PowerShell.Commands
             if (_computerName == string.Empty)
             {
                 // Set _computerName to "localhost" for future error messages,
-                // but do not use it for the connection to avoid RPC overhead.            
+                // but do not use it for the connection to avoid RPC overhead.
                 _computerName = "localhost";
 
                 if (_credential == PSCredential.Empty)
@@ -874,57 +861,60 @@ namespace Microsoft.PowerShell.Commands
         //
         // ReadEvents helper.
         //
-        private void ReadEvents(EventLogReader readerObj)
+        private void ReadEvents(EventLogQuery logQuery)
         {
-            Int64 numEvents = 0;
-            EventRecord evtObj = null;
-
-            while (true)
+            using (EventLogReader readerObj = new EventLogReader(logQuery))
             {
-                try
+                Int64 numEvents = 0;
+                EventRecord evtObj = null;
+
+                while (true)
                 {
-                    evtObj = readerObj.ReadEvent();
-                }
-                catch (Exception exc)
-                {
-                    WriteError(new ErrorRecord(exc, exc.Message, ErrorCategory.NotSpecified, null));
-                    continue;
-                }
-                if (evtObj == null)
-                {
-                    break;
-                }
-                if (_maxEvents != -1 && numEvents >= _maxEvents)
-                {
-                    break;
+                    try
+                    {
+                        evtObj = readerObj.ReadEvent();
+                    }
+                    catch (Exception exc)
+                    {
+                        WriteError(new ErrorRecord(exc, exc.Message, ErrorCategory.NotSpecified, null));
+                        continue;
+                    }
+                    if (evtObj == null)
+                    {
+                        break;
+                    }
+                    if (_maxEvents != -1 && numEvents >= _maxEvents)
+                    {
+                        break;
+                    }
+
+                    PSObject outputObj = new PSObject(evtObj);
+
+                    string evtMessage = _resourceMgr.GetString("NoEventMessage");
+                    try
+                    {
+                        evtMessage = evtObj.FormatDescription();
+                    }
+                    catch (Exception exc)
+                    {
+                        WriteError(new ErrorRecord(exc, exc.Message, ErrorCategory.NotSpecified, null));
+                    }
+                    outputObj.Properties.Add(new PSNoteProperty("Message", evtMessage));
+
+
+                    //
+                    // Enumerate the object one level to get to event payload
+                    //
+                    WriteObject(outputObj, true);
+                    numEvents++;
                 }
 
-                PSObject outputObj = new PSObject(evtObj);
-
-                string evtMessage = _resourceMgr.GetString("NoEventMessage");
-                try
+                if (numEvents == 0)
                 {
-                    evtMessage = evtObj.FormatDescription();
+                    string msg = _resourceMgr.GetString("NoMatchingEventsFound");
+                    Exception exc = new Exception(msg);
+                    WriteError(new ErrorRecord(exc, "NoMatchingEventsFound", ErrorCategory.ObjectNotFound, null));
                 }
-                catch (Exception exc)
-                {
-                    WriteError(new ErrorRecord(exc, exc.Message, ErrorCategory.NotSpecified, null));
-                }
-                outputObj.Properties.Add(new PSNoteProperty("Message", evtMessage));
-
-
-                //
-                // Enumerate the object one level to get to event payload
-                //
-                WriteObject(outputObj, true);
-                numEvents++;
-            }
-
-            if (numEvents == 0)
-            {
-                string msg = _resourceMgr.GetString("NoMatchingEventsFound");
-                Exception exc = new Exception(msg);
-                WriteError(new ErrorRecord(exc, "NoMatchingEventsFound", ErrorCategory.ObjectNotFound, null));
             }
         }
 
@@ -1080,7 +1070,7 @@ namespace Microsoft.PowerShell.Commands
                     }
                     xpathString.Append(added);
                 }
-                
+
             }
 
             return xpathString.ToString();
@@ -1120,9 +1110,9 @@ namespace Microsoft.PowerShell.Commands
                 // Process log, _path, or provider parameters first
                 // to create initial partially-filled query templates.
                 // Error out for direct channels unless -oldest is present.
-                // 
+                //
                 // Order is important! Process "providername" key after "logname" and "file".
-                //            
+                //
                 if (hash.ContainsKey(hashkey_logname_lc))
                 {
                     List<string> logPatterns = new List<string>();
@@ -1262,7 +1252,7 @@ namespace Microsoft.PowerShell.Commands
                 // Let's build xpathString to attach to each query opening.
                 //
                 xpathString = BuildXPathFromHashTable(hash);
-                
+
                 //
                 // Build xpath for <Suppress>
                 //
@@ -1277,7 +1267,7 @@ namespace Microsoft.PowerShell.Commands
                 // Handle the case where the query opener already has provider predicate(s).
                 // Add the queries from queriedLogsQueryMap into the resulting string.
                 // Add <Suppress> from queriedLogsQueryMapSuppress into the resulting string.
-                //        
+                //
                 foreach (string keyLogName in queriedLogsQueryMap.Keys)
                 {
                     // For every Log a separate query is
@@ -1319,7 +1309,7 @@ namespace Microsoft.PowerShell.Commands
 
                     result.Append(queryCloser);
                 }
-            } //end foreach hashtable  
+            } //end foreach hashtable
 
 
             result.Append(queryListClose);
@@ -1628,7 +1618,7 @@ namespace Microsoft.PowerShell.Commands
         }
 
         //
-        // TerminateForNonEvtxFileWithoutOldest terminates for .evt and .etl files unless -Oldest is specified.                
+        // TerminateForNonEvtxFileWithoutOldest terminates for .evt and .etl files unless -Oldest is specified.
         //
         private void TerminateForNonEvtxFileWithoutOldest(string fileName)
         {
@@ -1646,7 +1636,7 @@ namespace Microsoft.PowerShell.Commands
 
         //
         // ValidateLogName writes an error if logName is not a valid log.
-        // It also terminates for direct ETW channels unless -Oldest is specified.                
+        // It also terminates for direct ETW channels unless -Oldest is specified.
         //
         private bool ValidateLogName(string logName, EventLogSession eventLogSession)
         {
@@ -1710,7 +1700,7 @@ namespace Microsoft.PowerShell.Commands
         // StringToDateTime helper converts a string to DateTime object.
         // Returns true and DateTime ref if successful.
         // Writes an error and returns false if dtString cannot be converted.
-        // 
+        //
         private bool StringToDateTime(string dtString, ref DateTime dt)
         {
             try
@@ -1733,7 +1723,7 @@ namespace Microsoft.PowerShell.Commands
         // Returns a string collection of resolved file paths.
         // Writes non-terminating errors for invalid paths
         // and returns an empty collection.
-        // 
+        //
         private StringCollection ValidateAndResolveFilePath(string path)
         {
             StringCollection retColl = new StringCollection();
@@ -1782,7 +1772,7 @@ namespace Microsoft.PowerShell.Commands
                     continue;
                 }
 
-                // 
+                //
                 // Check the extension: only .evt, .evtx, and .etl files are allowed.
                 // If the file was specified without wildcards, display an error.
                 // Otherwise, skip silently.
@@ -1849,7 +1839,7 @@ namespace Microsoft.PowerShell.Commands
         //
         // AddProviderPredicatesToFilter() builds an XPath query
         // by adding provider predicates to _filter.
-        // Note that this is by no means an XPath expression parser 
+        // Note that this is by no means an XPath expression parser
         // and will may produce garbage if the _filterXPath expression provided by the user is invalid.
         // However, we are relying on the EventLog XPath parser to reject the garbage later on.
         //
@@ -1918,7 +1908,7 @@ namespace Microsoft.PowerShell.Commands
         // BuildAllProvidersPredicate() builds a predicate expression like:
         // "System/Provider[@Name='a' or @Name='b']"
         // for all unique provider names specified in _providersByLogMap.
-        // Eliminates duplicates, too, since the same provider can 
+        // Eliminates duplicates, too, since the same provider can
         // be writing to several different logs.
         //
         private string BuildAllProvidersPredicate()
@@ -1964,7 +1954,7 @@ namespace Microsoft.PowerShell.Commands
         // Retrieves log names to which _providerName writes.
         // NOTE: there are many misconfigured providers in the system.
         // We therefore catch EventLogException exceptions and write them out as non-terminating errors.
-        // The results are added to _providersByLogMap dictionary.  
+        // The results are added to _providersByLogMap dictionary.
         //
         private void AddLogsForProviderToInternalMap(EventLogSession eventLogSession, string providerName)
         {
@@ -1981,7 +1971,7 @@ namespace Microsoft.PowerShell.Commands
                         //
                         // Skip direct ETW channels unless -force is present.
                         // Error out for direct channels unless -oldest is present.
-                        //                
+                        //
                         EventLogConfiguration logObj = new EventLogConfiguration(logLink.LogName, eventLogSession);
                         if (logObj.LogType == EventLogType.Debug || logObj.LogType == EventLogType.Analytical)
                         {
@@ -2030,9 +2020,9 @@ namespace Microsoft.PowerShell.Commands
 
         //
         // FindLogNamesMatchingWildcards helper.
-        // Finds all logs whose names match wildcard patterns in the 'logPatterns' argument.   
+        // Finds all logs whose names match wildcard patterns in the 'logPatterns' argument.
         // For each non-matched pattern, a non-terminating error is written.
-        // The results are added to _logNamesMatchingWildcard array.  
+        // The results are added to _logNamesMatchingWildcard array.
         //
         private void FindLogNamesMatchingWildcards(EventLogSession eventLogSession, IEnumerable<string> logPatterns)
         {
@@ -2104,9 +2094,9 @@ namespace Microsoft.PowerShell.Commands
 
         //
         // FindProvidersByLogForWildcardPatterns helper.
-        // Finds all providers whose names match wildcard patterns in 'providerPatterns' argument.   
+        // Finds all providers whose names match wildcard patterns in 'providerPatterns' argument.
         // For each non-matched pattern, a non-terminating error is written.
-        // The results are added to _providersByLogMap dictionary (keyed by log names to which these providers write).  
+        // The results are added to _providersByLogMap dictionary (keyed by log names to which these providers write).
         //
         private void FindProvidersByLogForWildcardPatterns(EventLogSession eventLogSession, IEnumerable<string> providerPatterns)
         {

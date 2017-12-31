@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Diagnostics.CodeAnalysis;
 using System.Management.Automation;
+using System.Text.RegularExpressions;
 #if CORECLR
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -42,22 +43,51 @@ namespace Microsoft.PowerShell.Commands
             {
                 throw new ArgumentNullException("input");
             }
+
             error = null;
 #if CORECLR
-            object obj = JsonConvert.DeserializeObject(input, new JsonSerializerSettings() { TypeNameHandling = TypeNameHandling.None, MaxDepth = 1024 });
-
-            // JObject is a IDictionary
-            if (obj is JObject)
+            object obj = null;
+            try
             {
+                // JsonConvert.DeserializeObject does not throw an exception when an invalid Json array is passed.
+                // This issue is being tracked by https://github.com/JamesNK/Newtonsoft.Json/issues/1321.
+                // To work around this, we need to identify when input is a Json array, and then try to parse it via JArray.Parse().
+
+                // If input starts with '[' (ignoring white spaces).
+                if ((Regex.Match(input, @"^\s*\[")).Success)
+                {
+                    // JArray.Parse() will throw a JsonException if the array is invalid.
+                    // This will be caught by the catch block below, and then throw an
+                    // ArgumentException - this is done to have same behavior as the JavaScriptSerializer.
+                    JArray.Parse(input);
+
+                    // Please note that if the Json array is valid, we don't do anything,
+                    // we just continue the deserialization.
+                }
+
+                obj = JsonConvert.DeserializeObject(input, new JsonSerializerSettings() { TypeNameHandling = TypeNameHandling.None, MaxDepth = 1024 });
+
+                // JObject is a IDictionary
                 var dictionary = obj as JObject;
-                obj = PopulateFromJDictionary(dictionary, out error);
+                if (dictionary != null)
+                {
+                    obj = PopulateFromJDictionary(dictionary, out error);
+                }
+                else
+                {
+                    // JArray is a collection
+                    var list = obj as JArray;
+                    if (list != null)
+                    {
+                        obj = PopulateFromJArray(list, out error);
+                    }
+                }
             }
-
-            // JArray is a collection
-            else if (obj is JArray)
+            catch (JsonException je)
             {
-                var list = obj as JArray;
-                obj = PopulateFromJArray(list, out error);
+                var msg = string.Format(CultureInfo.CurrentCulture, WebCmdletStrings.JsonDeserializationFailed, je.Message);
+                // the same as JavaScriptSerializer does
+                throw new ArgumentException(msg, je);
             }
 #else
             //In ConvertTo-Json, to serialize an object with a given depth, we set the RecursionLimit to depth + 2, see JavaScriptSerializer constructor in ConvertToJsonCommand.cs.

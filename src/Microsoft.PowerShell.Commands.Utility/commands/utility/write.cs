@@ -8,20 +8,14 @@ using System.Management.Automation.Internal;
 using System.Runtime.Serialization;
 using System.Diagnostics.CodeAnalysis;
 
-#if CORECLR
-// Use stub for SystemException, SerializationInfo, SerializableAttribute and Serializable
-// It is needed for WriteErrorException which ONLY used in Write-Error cmdlet.
-using Microsoft.PowerShell.CoreClr.Stubs;
-#endif
-
 namespace Microsoft.PowerShell.Commands
 {
     #region WriteDebugCommand
     /// <summary>
     /// This class implements Write-Debug command
-    /// 
+    ///
     /// </summary>
-    [Cmdlet("Write", "Debug", HelpUri = "https://go.microsoft.com/fwlink/?LinkID=113424", RemotingCapability = RemotingCapability.None)]
+    [Cmdlet(VerbsCommunications.Write, "Debug", HelpUri = "https://go.microsoft.com/fwlink/?LinkID=113424", RemotingCapability = RemotingCapability.None)]
     public sealed class WriteDebugCommand : PSCmdlet
     {
         /// <summary>
@@ -69,9 +63,9 @@ namespace Microsoft.PowerShell.Commands
     #region WriteVerboseCommand
     /// <summary>
     /// This class implements Write-Verbose command
-    /// 
+    ///
     /// </summary>
-    [Cmdlet("Write", "Verbose", HelpUri = "https://go.microsoft.com/fwlink/?LinkID=113429", RemotingCapability = RemotingCapability.None)]
+    [Cmdlet(VerbsCommunications.Write, "Verbose", HelpUri = "https://go.microsoft.com/fwlink/?LinkID=113429", RemotingCapability = RemotingCapability.None)]
     public sealed class WriteVerboseCommand : PSCmdlet
     {
         /// <summary>
@@ -119,9 +113,9 @@ namespace Microsoft.PowerShell.Commands
     #region WriteWarningCommand
     /// <summary>
     /// This class implements Write-Warning command
-    /// 
+    ///
     /// </summary>
-    [Cmdlet("Write", "Warning", HelpUri = "https://go.microsoft.com/fwlink/?LinkID=113430", RemotingCapability = RemotingCapability.None)]
+    [Cmdlet(VerbsCommunications.Write, "Warning", HelpUri = "https://go.microsoft.com/fwlink/?LinkID=113430", RemotingCapability = RemotingCapability.None)]
     public sealed class WriteWarningCommand : PSCmdlet
     {
         /// <summary>
@@ -169,15 +163,15 @@ namespace Microsoft.PowerShell.Commands
     #region WriteInformationCommand
     /// <summary>
     /// This class implements Write-Information command
-    /// 
+    ///
     /// </summary>
-    [Cmdlet("Write", "Information", HelpUri = "https://go.microsoft.com/fwlink/?LinkId=525909", RemotingCapability = RemotingCapability.None)]
+    [Cmdlet(VerbsCommunications.Write, "Information", HelpUri = "https://go.microsoft.com/fwlink/?LinkId=525909", RemotingCapability = RemotingCapability.None)]
     public sealed class WriteInformationCommand : PSCmdlet
     {
         /// <summary>
         /// Object to be sent to the Information stream.
         /// </summary>
-        [Parameter(Position = 0, Mandatory = true)]
+        [Parameter(Position = 0, Mandatory = true, ValueFromPipeline = true)]
         [Alias("Msg")]
         public Object MessageData { get; set; }
 
@@ -206,10 +200,18 @@ namespace Microsoft.PowerShell.Commands
                     }
                 }
             }
+        }
 
+        /// <summary>
+        /// This method implements the ProcessRecord method for Write-Information command
+        /// </summary>
+        protected override void ProcessRecord()
+        {
             WriteInformation(MessageData, Tags);
         }
+
     }//WriteInformationCommand
+
     #endregion WriteInformationCommand
 
 
@@ -398,7 +400,7 @@ namespace Microsoft.PowerShell.Commands
     /// <summary>
     /// This class implements Write-Error command
     /// </summary>
-    [Cmdlet("Write", "Error", DefaultParameterSetName = "NoException",
+    [Cmdlet(VerbsCommunications.Write, "Error", DefaultParameterSetName = "NoException",
         HelpUri = "https://go.microsoft.com/fwlink/?LinkID=113425", RemotingCapability = RemotingCapability.None)]
     public sealed class WriteErrorCommand : WriteOrThrowErrorCommand
     {

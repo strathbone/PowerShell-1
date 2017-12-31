@@ -103,9 +103,9 @@ namespace System.Management.Automation.Runspaces
             Collection<PSSnapInTypeAndFormatErrors> returnValue = new Collection<PSSnapInTypeAndFormatErrors>();
 
             string baseFolder = GetBaseFolder(runspaceConfiguration, independentErrors);
-            var psHome = Utils.GetApplicationBase(Utils.DefaultPowerShellShellID);
+            var psHome = Utils.DefaultPowerShellAppBase;
 
-            // this hashtable will be used to check whether this is duplicated file for types or formats. 
+            // this hashtable will be used to check whether this is duplicated file for types or formats.
             HashSet<string> fullFileNameSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             int index = -1;
 

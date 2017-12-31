@@ -1,9 +1,9 @@
 ﻿/*============================================================================
- * Copyright (C) Microsoft Corporation, All rights reserved. 
+ * Copyright (C) Microsoft Corporation, All rights reserved.
  *============================================================================
  */
 
-// #define LOGENABLE // uncomment this line to enable the log, 
+// #define LOGENABLE // uncomment this line to enable the log,
                   // create c:\temp\cim.log before invoking cimcmdlets
 
 using System;
@@ -214,10 +214,6 @@ namespace Microsoft.Management.Infrastructure.CimCmdlets
         #region runtime methods
         internal static string GetSourceCodeInformation(bool withFileName, int depth)
         {
-#if CORECLR
-            //return a dummy string as StackFrame won't be available on CoreCLR
-            return string.Format(CultureInfo.CurrentUICulture, "{0}::{1}        ", "Type", "Method");
-#else
             StackTrace trace = new StackTrace();
             StackFrame frame = trace.GetFrame(depth);
             //if (withFileName)
@@ -231,8 +227,6 @@ namespace Microsoft.Management.Infrastructure.CimCmdlets
             return string.Format(CultureInfo.CurrentUICulture, "{0}::{1}        ",
                 frame.GetMethod().DeclaringType.Name,
                 frame.GetMethod().Name);
-            
-#endif
         }
         #endregion
 
@@ -371,7 +365,7 @@ namespace Microsoft.Management.Infrastructure.CimCmdlets
                     {
                         writer.WriteLineAsync(spaces[indent] + sourceInformation + @"        " + message);
                     }
-                    
+
                 }
             }
         }

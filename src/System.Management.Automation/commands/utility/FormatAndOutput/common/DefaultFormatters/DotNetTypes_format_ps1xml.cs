@@ -533,20 +533,18 @@ namespace System.Management.Automation.Runspaces
         {
             yield return new FormatViewDefinition("process",
                 TableControl.Create()
-                    .AddHeader(Alignment.Right, label: "Handles", width: 7)
                     .AddHeader(Alignment.Right, label: "NPM(K)", width: 7)
-                    .AddHeader(Alignment.Right, label: "PM(K)", width: 8)
-                    .AddHeader(Alignment.Right, label: "WS(K)", width: 10)
+                    .AddHeader(Alignment.Right, label: "PM(M)", width: 8)
+                    .AddHeader(Alignment.Right, label: "WS(M)", width: 10)
                     .AddHeader(Alignment.Right, label: "CPU(s)", width: 10)
                     .AddHeader(Alignment.Right, width: 6)
                     .AddHeader(Alignment.Right, width: 3)
                     .AddHeader()
                     .StartRowDefinition()
-                        .AddPropertyColumn("HandleCount")
                         .AddScriptBlockColumn("[long]($_.NPM / 1024)")
-                        .AddScriptBlockColumn("[long]($_.PM / 1024)")
-                        .AddScriptBlockColumn("[long]($_.WS / 1024)")
-                        .AddScriptBlockColumn(@"if ($_.CPU -ne $()) { $_.CPU.ToString(""N"") }")
+                        .AddScriptBlockColumn("\"{0:N2}\" -f [float]($_.PM / 1MB)")
+                        .AddScriptBlockColumn("\"{0:N2}\" -f [float]($_.WS / 1MB)")
+                        .AddScriptBlockColumn("\"{0:N2}\" -f [float]($_.CPU)")
                         .AddPropertyColumn("Id")
                         .AddPropertyColumn("SI")
                         .AddPropertyColumn("ProcessName")
@@ -557,12 +555,10 @@ namespace System.Management.Automation.Runspaces
                     .GroupByProperty("PriorityClass", label: "PriorityClass")
                     .AddHeader(width: 20)
                     .AddHeader(Alignment.Right, width: 10)
-                    .AddHeader(Alignment.Right, width: 13)
                     .AddHeader(Alignment.Right, width: 12)
                     .StartRowDefinition()
                         .AddPropertyColumn("ProcessName")
                         .AddPropertyColumn("Id")
-                        .AddPropertyColumn("HandleCount")
                         .AddPropertyColumn("WorkingSet64")
                     .EndRowDefinition()
                 .EndTable());
@@ -571,12 +567,10 @@ namespace System.Management.Automation.Runspaces
                     .GroupByScriptBlock("$_.StartTime.ToShortDateString()", label: "StartTime.ToShortDateString()")
                     .AddHeader(width: 20)
                     .AddHeader(Alignment.Right, width: 10)
-                    .AddHeader(Alignment.Right, width: 13)
                     .AddHeader(Alignment.Right, width: 12)
                     .StartRowDefinition()
                         .AddPropertyColumn("ProcessName")
                         .AddPropertyColumn("Id")
-                        .AddPropertyColumn("HandleCount")
                         .AddPropertyColumn("WorkingSet64")
                     .EndRowDefinition()
                 .EndTable());
@@ -591,16 +585,14 @@ namespace System.Management.Automation.Runspaces
         {
             yield return new FormatViewDefinition("ProcessWithUserName",
                 TableControl.Create()
-                    .AddHeader(Alignment.Right, label: "Handles", width: 7)
-                    .AddHeader(Alignment.Right, label: "WS(K)", width: 10)
+                    .AddHeader(Alignment.Right, label: "WS(M)", width: 10)
                     .AddHeader(Alignment.Right, label: "CPU(s)", width: 8)
                     .AddHeader(Alignment.Right, width: 6)
                     .AddHeader(width: 22)
                     .AddHeader()
                     .StartRowDefinition()
-                        .AddPropertyColumn("HandleCount")
-                        .AddScriptBlockColumn("[long]($_.WS / 1024)")
-                        .AddScriptBlockColumn(@"if ($_.CPU -ne $()) { $_.CPU.ToString(""N"") }")
+                        .AddScriptBlockColumn("\"{0:N2}\" -f [float]($_.WS / 1MB)")
+                        .AddScriptBlockColumn("\"{0:N2}\" -f [float]($_.CPU)")
                         .AddPropertyColumn("Id")
                         .AddPropertyColumn("UserName")
                         .AddPropertyColumn("ProcessName")
@@ -836,11 +828,11 @@ namespace System.Management.Automation.Runspaces
                     .AddHeader(label: "Time(ms)", width: 9)
                     .StartRowDefinition()
                          .AddScriptBlockColumn(@"
-							$sourceName = $_.PSComputerName;
-							if($sourceName -eq ""."")
-							{$sourceName = $env:COMPUTERNAME;}
-							return $sourceName;
-						")
+                            $sourceName = $_.PSComputerName;
+                            if($sourceName -eq ""."")
+                            {$sourceName = $env:COMPUTERNAME;}
+                            return $sourceName;
+                        ")
                         .AddPropertyColumn("Address")
                         .AddPropertyColumn("IPV4Address")
                         .AddPropertyColumn("IPV6Address")
@@ -861,36 +853,36 @@ namespace System.Management.Automation.Runspaces
                     .AddHeader(label: "RestorePointType", width: 22)
                     .StartRowDefinition()
                         .AddScriptBlockColumn(@"
-					return $_.ConvertToDateTime($_.CreationTime)
-				")
+                    return $_.ConvertToDateTime($_.CreationTime)
+                ")
                         .AddPropertyColumn("Description")
                         .AddPropertyColumn("SequenceNumber")
                         .AddScriptBlockColumn(@"
-					$eventType = $_.EventType;
-					if($_.EventType -eq 100)
-					{$eventType = ""BEGIN_SYSTEM_CHANGE"";}				
-					if($_.EventType -eq 101)
-					{$eventType = ""END_SYSTEM_CHANGE"";}				
-					if($_.EventType -eq 102)
-					{$eventType = ""BEGIN_NESTED_SYSTEM_CHANGE"";}				
-					if($_.EventType -eq 103)
-					{$eventType = ""END_NESTED_SYSTEM_CHANGE"";}				
-					return $eventType;
-				")
+                    $eventType = $_.EventType;
+                    if($_.EventType -eq 100)
+                    {$eventType = ""BEGIN_SYSTEM_CHANGE"";}
+                    if($_.EventType -eq 101)
+                    {$eventType = ""END_SYSTEM_CHANGE"";}
+                    if($_.EventType -eq 102)
+                    {$eventType = ""BEGIN_NESTED_SYSTEM_CHANGE"";}
+                    if($_.EventType -eq 103)
+                    {$eventType = ""END_NESTED_SYSTEM_CHANGE"";}
+                    return $eventType;
+                ")
                         .AddScriptBlockColumn(@"
-				$RestorePointType = $_.RestorePointType;
-				if($_.RestorePointType -eq 0)
-				{	$RestorePointType = ""APPLICATION_INSTALL"";}
-				if($_.RestorePointType -eq 1)
-				{	$RestorePointType = ""APPLICATION_UNINSTALL"";}
-				if($_.RestorePointType -eq 10)
-				{	$RestorePointType = ""DEVICE_DRIVER_INSTALL"";}
-				if($_.RestorePointType -eq 12)
-				{	$RestorePointType = ""MODIFY_SETTINGS"";}
-				if($_.RestorePointType -eq 13)
-				{ $RestorePointType = ""CANCELLED_OPERATION"";}
-			        return $RestorePointType;
-				")
+                $RestorePointType = $_.RestorePointType;
+                if($_.RestorePointType -eq 0)
+                { $RestorePointType = ""APPLICATION_INSTALL"";}
+                if($_.RestorePointType -eq 1)
+                { $RestorePointType = ""APPLICATION_UNINSTALL"";}
+                if($_.RestorePointType -eq 10)
+                { $RestorePointType = ""DEVICE_DRIVER_INSTALL"";}
+                if($_.RestorePointType -eq 12)
+                { $RestorePointType = ""MODIFY_SETTINGS"";}
+                if($_.RestorePointType -eq 13)
+                { $RestorePointType = ""CANCELLED_OPERATION"";}
+                    return $RestorePointType;
+                ")
                     .EndRowDefinition()
                 .EndTable());
         }
@@ -925,13 +917,13 @@ namespace System.Management.Automation.Runspaces
                         .AddScriptBlockColumn(@"
                     $RestorePointType = $_.RestorePointType;
                     if($_.RestorePointType -eq 0)
-                    {	$RestorePointType = ""APPLICATION_INSTALL"";}
+                    { $RestorePointType = ""APPLICATION_INSTALL"";}
                     if($_.RestorePointType -eq 1)
-                    {	$RestorePointType = ""APPLICATION_UNINSTALL"";}
+                    { $RestorePointType = ""APPLICATION_UNINSTALL"";}
                     if($_.RestorePointType -eq 10)
-                    {	$RestorePointType = ""DEVICE_DRIVER_INSTALL"";}
+                    { $RestorePointType = ""DEVICE_DRIVER_INSTALL"";}
                     if($_.RestorePointType -eq 12)
-                    {	$RestorePointType = ""MODIFY_SETTINGS"";}
+                    { $RestorePointType = ""MODIFY_SETTINGS"";}
                     if($_.RestorePointType -eq 13)
                     { $RestorePointType = ""CANCELLED_OPERATION"";}
                     return $RestorePointType;

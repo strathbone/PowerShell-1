@@ -27,7 +27,7 @@ Describe "Native streams behavior with PowerShell" -Tags 'CI' {
             $out[0] | Should BeOfType 'System.Management.Automation.ErrorRecord'
             $out[0].FullyQualifiedErrorId | Should Be 'NativeCommandError'
 
-            $out | Select-Object -Skip 1 | % {
+            $out | Select-Object -Skip 1 | ForEach-Object {
                 $_ | Should BeOfType 'System.Management.Automation.ErrorRecord'
                 $_.FullyQualifiedErrorId | Should Be 'NativeCommandErrorMessage'
             }
@@ -49,5 +49,15 @@ Describe "Native streams behavior with PowerShell" -Tags 'CI' {
         It 'preserves error stream as is with Out-String' {
             ($out | Out-String).Replace("`r", '') | Should Be "foo`n`nbar`n`nbazmiddlefoo`n`nbar`n`nbaz`n"
         }
+    }
+}
+
+Describe 'piping powershell objects to finished native executable' -Tags 'CI' {
+    It 'doesn''t throw any exceptions, when we are piping to the closed executable' {
+        1..3 | ForEach-Object {
+            Start-Sleep -Milliseconds 100
+            # yeild some multi-line formatted object
+            @{'a' = 'b'}
+        } | testexe -echoargs | Should Be $null
     }
 }

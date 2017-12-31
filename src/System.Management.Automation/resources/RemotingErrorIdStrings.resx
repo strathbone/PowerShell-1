@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <root>
-  <!-- 
-    Microsoft ResX Schema 
-    
+  <!--
+    Microsoft ResX Schema
+
     Version 2.0
-    
-    The primary goals of this format is to allow a simple XML format 
-    that is mostly human readable. The generation and parsing of the 
-    various data types are done through the TypeConverter classes 
+
+    The primary goals of this format is to allow a simple XML format
+    that is mostly human readable. The generation and parsing of the
+    various data types are done through the TypeConverter classes
     associated with the data types.
-    
+
     Example:
-    
+
     ... ado.net/XML headers & schema ...
     <resheader name="resmimetype">text/microsoft-resx</resheader>
     <resheader name="version">2.0</resheader>
@@ -26,41 +26,41 @@
         <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
         <comment>This is a comment</comment>
     </data>
-                
-    There are any number of "resheader" rows that contain simple 
+
+    There are any number of "resheader" rows that contain simple
     name/value pairs.
-    
-    Each data row contains a name, and value. The row also contains a 
-    type or mimetype. Type corresponds to a .NET class that support 
-    text/value conversion through the TypeConverter architecture. 
-    Classes that don't support this are serialized and stored with the 
+
+    Each data row contains a name, and value. The row also contains a
+    type or mimetype. Type corresponds to a .NET class that support
+    text/value conversion through the TypeConverter architecture.
+    Classes that don't support this are serialized and stored with the
     mimetype set.
-    
-    The mimetype is used for serialized objects, and tells the 
-    ResXResourceReader how to depersist the object. This is currently not 
+
+    The mimetype is used for serialized objects, and tells the
+    ResXResourceReader how to depersist the object. This is currently not
     extensible. For a given mimetype the value must be set accordingly:
-    
-    Note - application/x-microsoft.net.object.binary.base64 is the format 
-    that the ResXResourceWriter will generate, however the reader can 
+
+    Note - application/x-microsoft.net.object.binary.base64 is the format
+    that the ResXResourceWriter will generate, however the reader can
     read any of the formats listed below.
-    
+
     mimetype: application/x-microsoft.net.object.binary.base64
-    value   : The object must be serialized with 
+    value   : The object must be serialized with
             : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
             : and then encoded with base64 encoding.
-    
+
     mimetype: application/x-microsoft.net.object.soap.base64
-    value   : The object must be serialized with 
+    value   : The object must be serialized with
             : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
             : and then encoded with base64 encoding.
 
     mimetype: application/x-microsoft.net.object.bytearray.base64
-    value   : The object must be serialized into a byte array 
+    value   : The object must be serialized into a byte array
             : using a System.ComponentModel.TypeConverter
             : and then encoded with base64 encoding.
     -->
-  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
-    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+  <xsd:schema id="root" xmlns="" xmlns:xsd="https://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="https://www.w3.org/XML/1998/namespace" />
     <xsd:element name="root" msdata:IsDataSet="true">
       <xsd:complexType>
         <xsd:choice maxOccurs="unbounded">
@@ -655,6 +655,12 @@
   </data>
   <data name="CSCmdsShellNotPowerShellBased" xml:space="preserve">
     <value>Session configuration "{0}" is not a Windows PowerShell-based shell.</value>
+</data>
+  <data name="CSCmdsPowerShellCoreShellNotModifiable" xml:space="preserve">
+    <value>Session configuration "{0}" is a PowerShell Core-based shell. Please use PowerShell Core to modify it.</value>
+  </data>
+  <data name="CSCmdsWindowsPowerShellCoreNotModifiable" xml:space="preserve">
+    <value>Session configuration "{0}" is a Windows PowerShell-based shell. Please use Windows PowerShell to modify it.</value>
   </data>
   <data name="CustomShellNotFound" xml:space="preserve">
     <value>No session configuration matches criteria "{0}".</value>
@@ -936,7 +942,7 @@ Do you want to continue?</value>
     <value>{0} may need to restart the WinRM service if a configuration using this name has recently been unregistered, certain system data structures may still be cached. In that case, a restart of WinRM may be required.
 All WinRM sessions connected to Windows PowerShell session configurations, such as Microsoft.PowerShell and session configurations that are created with the Register-PSSessionConfiguration cmdlet, are disconnected.</value>
   </data>
-   <data name="WinRMForceRestartWarning" xml:space="preserve">
+  <data name="WinRMForceRestartWarning" xml:space="preserve">
     <value>You are running in a remote session and have selected the Force option which means the WinRM service may restart.If the WinRM service restarts then this remote session will be terminated and you will need to create a new session to continue</value>
   </data>
   <data name="JobSourceAdapterCannotSaveNullJob" xml:space="preserve">
@@ -1359,9 +1365,6 @@ All WinRM sessions connected to Windows PowerShell session configurations, such 
   <data name="ReceivePSSessionInDebugMode" xml:space="preserve">
     <value>The remote session command is currently stopped in the debugger.  Use the Enter-PSSession cmdlet to connect interactively to the remote session and automatically enter into the console debugger.</value>
   </data>
-  <data name="RCDisconnectDebug" xml:space="preserve">
-    <value>Session {0} with instance ID {1} on computer {2} has been disconnected because the script running on the session has stopped at a breakpoint. Use the Enter-PSSession cmdlet on this session to connect back to the session and begin interactive debugging.</value>
-  </data>
   <data name="RemoteDebuggingEndpointVersionError" xml:space="preserve">
     <value>The remote session to which you are connected does not support remote debugging. You must connect to a remote computer that is running Windows PowerShell {0} or greater.</value>
   </data>
@@ -1618,7 +1621,40 @@ All WinRM sessions connected to Windows PowerShell session configurations, such 
   <data name="SSHClientEndWithErrorMessage" xml:space="preserve">
     <value>The SSH client session has ended with error message: {0}</value>
   </data>
-  <data name="SSHClientEndNoErrorMessage" xml:space="preserve">
-    <value>The SSH client session has ended with no error message.</value>
+  <data name="MissingRequiredSSHParameter" xml:space="preserve">
+    <value>The provided SSHConnection hashtable is missing the required ComputerName or HostName parameter.</value>
+  </data>
+  <data name="InvalidSSHConnectionParameter" xml:space="preserve">
+    <value>The provided SSHConnection hashtable parameter name or element is null or empty.</value>
+  </data>
+  <data name="UnknownSSHConnectionParameter" xml:space="preserve">
+    <value>The provided SSHConnection hashtable parameter {0} is not supported.</value>
+  </data>
+  <data name="SSHConnectionDuplicateHostName" xml:space="preserve">
+    <value>The provided SSHConnection hashtable contains both a ComputerName and HostName parameter.  Only one can be specified.</value>
+  </data>
+  <data name="SSHConnectionDuplicateKeyPath" xml:space="preserve">
+    <value>The provided SSHConnection hashtable contains both a KeyFilePath and IdentityFilePath parameter.  Only one can be specified.</value>
+  </data>
+  <data name="CouldNotFindRoleCapabilityFile" xml:space="preserve">
+    <value>Could not find the provided role capability file {0}.</value>
+  </data>
+  <data name="InvalidRoleCapabilityFileExtension" xml:space="preserve">
+    <value>The provided role capability file {0} does not have the required .psrc extension.</value>
+  </data>
+  <data name="SSHAbruptlyTerminated" xml:space="preserve">
+    <value>The SSH transport process has abruptly terminated causing this remote session to break.</value>
+  </data>
+  <data name="InvalidProcessorArchitecture" xml:space="preserve">
+    <value>PowerShell Core does not support WOW64. The binary must match the architecture of the processor.</value>
+  </data>
+  <data name="UnableToInstallPlugin" xml:space="preserve">
+      <value>Unable to install plugin {0} to directory {1}.</value>
+  </data>
+  <data name="PluginDllMissing" xml:space="preserve">
+      <value>The WinRM plugin DLL {0} is missing for PowerShell Core. Please run Enable-PSRemoting and then retry this command.</value>
+  </data>
+  <data name="WSManClientDllNotAvailable" xml:space="preserve">
+    <value>This parameter set requires WSMan, and no supported WSMan client library was found. WSMan is either not installed or unavailable for this system.</value>
   </data>
 </root>

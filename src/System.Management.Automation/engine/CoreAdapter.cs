@@ -6,6 +6,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Data;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Dynamic;
@@ -363,7 +364,6 @@ namespace System.Management.Automation
             catch (ExtendedTypeSystemException) { throw; }
             catch (Exception e)
             {
-                CommandProcessorBase.CheckForSevereException(e);
                 throw NewException(e, "CatchFromBaseGetTypeNameHierarchy", "CatchFromBaseGetTypeNameHierarchyTI",
                                    ExtendedTypeSystem.ExceptionRetrievingTypeNameHierarchy);
             }
@@ -378,7 +378,6 @@ namespace System.Management.Automation
             catch (ExtendedTypeSystemException) { throw; }
             catch (Exception e)
             {
-                CommandProcessorBase.CheckForSevereException(e);
                 throw NewException(e, "CatchFromBaseGetMember", "CatchFromBaseGetMemberTI",
                     ExtendedTypeSystem.ExceptionGettingMember, memberName);
             }
@@ -393,7 +392,6 @@ namespace System.Management.Automation
             catch (ExtendedTypeSystemException) { throw; }
             catch (Exception e)
             {
-                CommandProcessorBase.CheckForSevereException(e);
                 throw NewException(e, "CatchFromBaseGetMembers", "CatchFromBaseGetMembersTI",
                     ExtendedTypeSystem.ExceptionGettingMembers);
             }
@@ -420,7 +418,6 @@ namespace System.Management.Automation
             catch (GetValueException) { throw; }
             catch (Exception e)
             {
-                CommandProcessorBase.CheckForSevereException(e);
                 throw new GetValueInvocationException("CatchFromBaseAdapterGetValue",
                     e,
                     ExtendedTypeSystem.ExceptionWhenGetting,
@@ -445,7 +442,6 @@ namespace System.Management.Automation
             catch (SetValueException) { throw; }
             catch (Exception e)
             {
-                CommandProcessorBase.CheckForSevereException(e);
                 throw new SetValueInvocationException("CatchFromBaseAdapterSetValue",
                     e,
                     ExtendedTypeSystem.ExceptionWhenSetting,
@@ -462,7 +458,6 @@ namespace System.Management.Automation
             catch (ExtendedTypeSystemException) { throw; }
             catch (Exception e)
             {
-                CommandProcessorBase.CheckForSevereException(e);
                 throw NewException(e, "CatchFromBasePropertyIsSettable", "CatchFromBasePropertyIsSettableTI",
                     ExtendedTypeSystem.ExceptionRetrievingPropertyWriteState, property.Name);
             }
@@ -477,7 +472,6 @@ namespace System.Management.Automation
             catch (ExtendedTypeSystemException) { throw; }
             catch (Exception e)
             {
-                CommandProcessorBase.CheckForSevereException(e);
                 throw NewException(e, "CatchFromBasePropertyIsGettable", "CatchFromBasePropertyIsGettableTI",
                     ExtendedTypeSystem.ExceptionRetrievingPropertyReadState, property.Name);
             }
@@ -492,7 +486,6 @@ namespace System.Management.Automation
             catch (ExtendedTypeSystemException) { throw; }
             catch (Exception e)
             {
-                CommandProcessorBase.CheckForSevereException(e);
                 throw NewException(e, "CatchFromBasePropertyType", "CatchFromBasePropertyTypeTI",
                     ExtendedTypeSystem.ExceptionRetrievingPropertyType, property.Name);
             }
@@ -507,7 +500,6 @@ namespace System.Management.Automation
             catch (ExtendedTypeSystemException) { throw; }
             catch (Exception e)
             {
-                CommandProcessorBase.CheckForSevereException(e);
                 throw NewException(e, "CatchFromBasePropertyToString", "CatchFromBasePropertyToStringTI",
                     ExtendedTypeSystem.ExceptionRetrievingPropertyString, property.Name);
             }
@@ -522,7 +514,6 @@ namespace System.Management.Automation
             catch (ExtendedTypeSystemException) { throw; }
             catch (Exception e)
             {
-                CommandProcessorBase.CheckForSevereException(e);
                 throw NewException(e, "CatchFromBasePropertyAttributes", "CatchFromBasePropertyAttributesTI",
                     ExtendedTypeSystem.ExceptionRetrievingPropertyAttributes, property.Name);
             }
@@ -551,8 +542,6 @@ namespace System.Management.Automation
             catch (MethodException) { throw; }
             catch (Exception e)
             {
-                CommandProcessorBase.CheckForSevereException(e);
-
                 if (method.baseObject is SteppablePipeline
                     && (method.Name.Equals("Begin", StringComparison.OrdinalIgnoreCase) ||
                         method.Name.Equals("Process", StringComparison.OrdinalIgnoreCase) ||
@@ -577,7 +566,6 @@ namespace System.Management.Automation
             catch (ExtendedTypeSystemException) { throw; }
             catch (Exception e)
             {
-                CommandProcessorBase.CheckForSevereException(e);
                 throw NewException(e, "CatchFromBaseMethodDefinitions", "CatchFromBaseMethodDefinitionsTI",
                     ExtendedTypeSystem.ExceptionRetrievingMethodDefinitions, method.Name);
             }
@@ -592,7 +580,6 @@ namespace System.Management.Automation
             catch (ExtendedTypeSystemException) { throw; }
             catch (Exception e)
             {
-                CommandProcessorBase.CheckForSevereException(e);
                 throw NewException(e, "CatchFromBaseMethodToString", "CatchFromBaseMethodToStringTI",
                     ExtendedTypeSystem.ExceptionRetrievingMethodString, method.Name);
             }
@@ -610,7 +597,6 @@ namespace System.Management.Automation
             catch (ExtendedTypeSystemException) { throw; }
             catch (Exception e)
             {
-                CommandProcessorBase.CheckForSevereException(e);
                 throw NewException(e, "CatchFromBaseParameterizedPropertyType", "CatchFromBaseParameterizedPropertyTypeTI",
                     ExtendedTypeSystem.ExceptionRetrievingParameterizedPropertytype, property.Name);
             }
@@ -625,7 +611,6 @@ namespace System.Management.Automation
             catch (ExtendedTypeSystemException) { throw; }
             catch (Exception e)
             {
-                CommandProcessorBase.CheckForSevereException(e);
                 throw NewException(e, "CatchFromBaseParameterizedPropertyIsSettable", "CatchFromBaseParameterizedPropertyIsSettableTI",
                     ExtendedTypeSystem.ExceptionRetrievingParameterizedPropertyWriteState, property.Name);
             }
@@ -640,7 +625,6 @@ namespace System.Management.Automation
             catch (ExtendedTypeSystemException) { throw; }
             catch (Exception e)
             {
-                CommandProcessorBase.CheckForSevereException(e);
                 throw NewException(e, "CatchFromBaseParameterizedPropertyIsGettable", "CatchFromBaseParameterizedPropertyIsGettableTI",
                     ExtendedTypeSystem.ExceptionRetrievingParameterizedPropertyReadState, property.Name);
             }
@@ -655,7 +639,6 @@ namespace System.Management.Automation
             catch (ExtendedTypeSystemException) { throw; }
             catch (Exception e)
             {
-                CommandProcessorBase.CheckForSevereException(e);
                 throw NewException(e, "CatchFromBaseParameterizedPropertyDefinitions", "CatchFromBaseParameterizedPropertyDefinitionsTI",
                     ExtendedTypeSystem.ExceptionRetrievingParameterizedPropertyDefinitions, property.Name);
             }
@@ -678,7 +661,6 @@ namespace System.Management.Automation
             catch (GetValueException) { throw; }
             catch (Exception e)
             {
-                CommandProcessorBase.CheckForSevereException(e);
                 throw new GetValueInvocationException("CatchFromBaseParameterizedPropertyAdapterGetValue",
                     e,
                     ExtendedTypeSystem.ExceptionWhenGetting,
@@ -703,7 +685,6 @@ namespace System.Management.Automation
             catch (SetValueException) { throw; }
             catch (Exception e)
             {
-                CommandProcessorBase.CheckForSevereException(e);
                 throw new SetValueInvocationException("CatchFromBaseAdapterParameterizedPropertySetValue",
                     e,
                     ExtendedTypeSystem.ExceptionWhenSetting,
@@ -723,7 +704,6 @@ namespace System.Management.Automation
             catch (ExtendedTypeSystemException) { throw; }
             catch (Exception e)
             {
-                CommandProcessorBase.CheckForSevereException(e);
                 throw NewException(e, "CatchFromBaseParameterizedPropertyToString", "CatchFromBaseParameterizedPropertyToStringTI",
                     ExtendedTypeSystem.ExceptionRetrievingParameterizedPropertyString, property.Name);
             }
@@ -3801,7 +3781,6 @@ namespace System.Management.Automation
             }
             catch (Exception e)
             {
-                CommandProcessorBase.CheckForSevereException(e);
                 throw new MethodInvocationException(
                     "DotNetconstructorException",
                     e,
@@ -3862,8 +3841,6 @@ namespace System.Management.Automation
             catch (PipelineStoppedException) { throw; }
             catch (Exception e)
             {
-                CommandProcessorBase.CheckForSevereException(e);
-
                 if (methodInformation.method.DeclaringType == typeof(SteppablePipeline) &&
                     (methodInformation.method.Name.Equals("Begin") ||
                      methodInformation.method.Name.Equals("Process") ||
@@ -4911,14 +4888,8 @@ namespace System.Management.Automation
         /// <param name="convertIfPossible">instructs the adapter to convert before setting, if the adapter supports conversion</param>
         protected override void PropertySet(PSProperty property, object setValue, bool convertIfPossible)
         {
-            string valueString = setValue as string;
-            if (valueString == null)
-            {
-                throw new SetValueException("XmlNodeSetShouldBeAString",
-                    null,
-                    ExtendedTypeSystem.XmlNodeSetShouldBeAString,
-                    property.Name);
-            }
+            // XML is always a string so implicitly convert to string
+            string valueString = LanguagePrimitives.ConvertTo<string>(setValue);
             XmlNode[] nodes = (XmlNode[])property.adapterData;
             Diagnostics.Assert(nodes.Length != 0, "DoGetProperty would not return an empty array, it would return null instead");
             if (nodes.Length > 1)
@@ -5035,6 +5006,221 @@ namespace System.Management.Automation
 
             return retValue.ToArray();
         }
+    }
+
+    /// <summary>
+    /// Deals with DataRow objects
+    /// </summary>
+    internal class DataRowAdapter : PropertyOnlyAdapter
+    {
+        #region virtual
+        /// <summary>
+        /// Retrieves all the properties available in the object.
+        /// </summary>
+        /// <param name="obj">object to get all the property information from</param>
+        /// <param name="members">collection where the members will be added</param>
+        protected override void DoAddAllProperties<T>(object obj, PSMemberInfoInternalCollection<T> members)
+        {
+            DataRow dataRow = (DataRow)obj;
+            if (dataRow.Table == null || dataRow.Table.Columns == null)
+            {
+                return;
+            }
+
+            foreach (DataColumn property in dataRow.Table.Columns)
+            {
+                members.Add(new PSProperty(property.ColumnName, this, obj, property.ColumnName) as T);
+            }
+
+            return;
+        }
+        /// <summary>
+        /// Returns null if propertyName is not a property in the adapter or
+        /// the corresponding PSProperty with its adapterData set to information
+        /// to be used when retrieving the property.
+        /// </summary>
+        /// <param name="obj">object to retrieve the PSProperty from</param>
+        /// <param name="propertyName">name of the property to be retrieved</param>
+        /// <returns>The PSProperty corresponding to propertyName from obj</returns>
+        protected override PSProperty DoGetProperty(object obj, string propertyName)
+        {
+            DataRow dataRow = (DataRow)obj;
+
+            if (!dataRow.Table.Columns.Contains(propertyName))
+            {
+                return null;
+            }
+
+            string columnName = dataRow.Table.Columns[propertyName].ColumnName;
+            return new PSProperty(columnName, this, obj, columnName);
+        }
+
+        /// <summary>
+        /// Returns the name of the type corresponding to the property
+        /// </summary>
+        /// <param name="property">PSProperty obtained in a previous DoGetProperty</param>
+        /// <param name="forDisplay">True if the result is for display purposes only</param>
+        /// <returns>the name of the type corresponding to the property</returns>
+        protected override string PropertyType(PSProperty property, bool forDisplay)
+        {
+            string columnName = (string)property.adapterData;
+            DataRow dataRow = (DataRow)property.baseObject;
+            var dataType = dataRow.Table.Columns[columnName].DataType;
+            return forDisplay ? ToStringCodeMethods.Type(dataType) : dataType.FullName;
+        }
+
+        /// <summary>
+        /// Returns true if the property is settable
+        /// </summary>
+        /// <param name="property">property to check</param>
+        /// <returns>true if the property is settable</returns>
+        protected override bool PropertyIsSettable(PSProperty property)
+        {
+            string columnName = (string)property.adapterData;
+            DataRow dataRow = (DataRow)property.baseObject;
+            return !dataRow.Table.Columns[columnName].ReadOnly;
+        }
+
+        /// <summary>
+        /// Returns true if the property is gettable
+        /// </summary>
+        /// <param name="property">property to check</param>
+        /// <returns>true if the property is gettable</returns>
+        protected override bool PropertyIsGettable(PSProperty property)
+        {
+            return true;
+        }
+
+
+        /// <summary>
+        /// Returns the value from a property coming from a previous call to DoGetProperty
+        /// </summary>
+        /// <param name="property">PSProperty coming from a previous call to DoGetProperty</param>
+        /// <returns>The value of the property</returns>
+        protected override object PropertyGet(PSProperty property)
+        {
+            DataRow dataRow = (DataRow)property.baseObject;
+            return dataRow[(string)property.adapterData];
+        }
+        /// <summary>
+        /// Sets the value of a property coming from a previous call to DoGetProperty
+        /// </summary>
+        /// <param name="property">PSProperty coming from a previous call to DoGetProperty</param>
+        /// <param name="setValue">value to set the property with</param>
+        /// <param name="convertIfPossible">instructs the adapter to convert before setting, if the adapter supports conversion</param>
+        protected override void PropertySet(PSProperty property, object setValue, bool convertIfPossible)
+        {
+            DataRow dataRow = (DataRow)property.baseObject;
+            dataRow[(string)property.adapterData] = setValue;
+            return;
+        }
+        #endregion virtual
+    }
+    /// <summary>
+    /// Deals with DataRowView objects
+    /// </summary>
+    internal class DataRowViewAdapter : PropertyOnlyAdapter
+    {
+        #region virtual
+        /// <summary>
+        /// Retrieves all the properties available in the object.
+        /// </summary>
+        /// <param name="obj">object to get all the property information from</param>
+        /// <param name="members">collection where the members will be added</param>
+        protected override void DoAddAllProperties<T>(object obj, PSMemberInfoInternalCollection<T> members)
+        {
+            DataRowView dataRowView = (DataRowView)obj;
+            if (dataRowView.Row == null || dataRowView.Row.Table == null || dataRowView.Row.Table.Columns == null)
+            {
+                return;
+            }
+
+            foreach (DataColumn property in dataRowView.Row.Table.Columns)
+            {
+                members.Add(new PSProperty(property.ColumnName, this, obj, property.ColumnName) as T);
+            }
+
+            return;
+        }
+        /// <summary>
+        /// Returns null if propertyName is not a property in the adapter or
+        /// the corresponding PSProperty with its adapterData set to information
+        /// to be used when retrieving the property.
+        /// </summary>
+        /// <param name="obj">object to retrieve the PSProperty from</param>
+        /// <param name="propertyName">name of the property to be retrieved</param>
+        /// <returns>The PSProperty corresponding to propertyName from obj</returns>
+        protected override PSProperty DoGetProperty(object obj, string propertyName)
+        {
+            DataRowView dataRowView = (DataRowView)obj;
+
+            if (!dataRowView.Row.Table.Columns.Contains(propertyName))
+            {
+                return null;
+            }
+            string columnName = dataRowView.Row.Table.Columns[propertyName].ColumnName;
+            return new PSProperty(columnName, this, obj, columnName);
+        }
+
+        /// <summary>
+        /// Returns the name of the type corresponding to the property
+        /// </summary>
+        /// <param name="property">PSProperty obtained in a previous DoGetProperty</param>
+        /// <param name="forDisplay">True if the result is for display purposes only</param>
+        /// <returns>the name of the type corresponding to the property</returns>
+        protected override string PropertyType(PSProperty property, bool forDisplay)
+        {
+            string columnName = (string)property.adapterData;
+            DataRowView dataRowView = (DataRowView)property.baseObject;
+            var dataType = dataRowView.Row.Table.Columns[columnName].DataType;
+            return forDisplay ? ToStringCodeMethods.Type(dataType) : dataType.FullName;
+        }
+
+        /// <summary>
+        /// Returns true if the property is settable
+        /// </summary>
+        /// <param name="property">property to check</param>
+        /// <returns>true if the property is settable</returns>
+        protected override bool PropertyIsSettable(PSProperty property)
+        {
+            string columnName = (string)property.adapterData;
+            DataRowView dataRowView = (DataRowView)property.baseObject;
+            return !dataRowView.Row.Table.Columns[columnName].ReadOnly;
+        }
+
+        /// <summary>
+        /// Returns true if the property is gettable
+        /// </summary>
+        /// <param name="property">property to check</param>
+        /// <returns>true if the property is gettable</returns>
+        protected override bool PropertyIsGettable(PSProperty property)
+        {
+            return true;
+        }
+
+        /// <summary>
+        /// Returns the value from a property coming from a previous call to DoGetProperty
+        /// </summary>
+        /// <param name="property">PSProperty coming from a previous call to DoGetProperty</param>
+        /// <returns>The value of the property</returns>
+        protected override object PropertyGet(PSProperty property)
+        {
+            DataRowView dataRowView = (DataRowView)property.baseObject;
+            return dataRowView[(string)property.adapterData];
+        }
+        /// <summary>
+        /// Sets the value of a property coming from a previous call to DoGetProperty
+        /// </summary>
+        /// <param name="property">PSProperty coming from a previous call to DoGetProperty</param>
+        /// <param name="setValue">value to set the property with</param>
+        /// <param name="convertIfPossible">instructs the adapter to convert before setting, if the adapter supports conversion</param>
+        protected override void PropertySet(PSProperty property, object setValue, bool convertIfPossible)
+        {
+            DataRowView dataRowView = (DataRowView)property.baseObject;
+            dataRowView[(string)property.adapterData] = setValue;
+            return;
+        }
+        #endregion virtual
     }
 
     internal class TypeInference

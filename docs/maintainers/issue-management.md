@@ -8,6 +8,7 @@ Issues are opened for many different reasons.
 We use the following labels for issue classifications:
 
 * `Issue-Bug`: the issue is reporting a bug
+* `Issue-Code Cleanup`: the issue is for cleaning up the code with no impact on functionality
 * `Issue-Discussion`: the issue may not have a clear classification yet.
   The issue may generate an [RFC][ln-rfc] or may be reclassified as a bug or enhancement.
 * `Issue-Enhancement`: the issue is more of a feature request than a bug.
@@ -33,11 +34,14 @@ When an issue is resolved, the following labels are used to describe the resolut
 These labels describe what feature area of PowerShell that an issue affects:
 
 * `Area-Build`: build issues
-* `Area-Cmdlets`: cmdlets in any module
+* `Area-Cmdlets-Core`: cmdlets in the Microsoft.PowerShell.Core module
+* `Area-Cmdlets-Utility`: cmdlets in the Microsoft.PowerShell.Utility module
+* `Area-Cmdlets-Management`: cmdlets in the Microsoft.PowerShell.Management module
 * `Area-Console`: the console experience
 * `Area-Debugging`: debugging PowerShell script
 * `Area-Demo`: a demo or sample
 * `Area-Documentation`: PowerShell *repo* documentation issues, general PowerShell doc issues go [here](https://github.com/PowerShell/PowerShell-Docs/issues)
+* `Area-DSC`: DSC related issues
 * `Area-Engine`: core PowerShell engine, interpreter, runtime
 * `Area-HelpSystem`: anything related to the help infrastructure and formatting of help
 * `Area-Intellisense`: tab completion
@@ -47,10 +51,12 @@ These labels describe what feature area of PowerShell that an issue affects:
 * `Area-Performance`: a performance issue
 * `Area-Portability`: anything affecting script portability
 * `Area-PowerShellGet`: PowerShellGet related issues
-* `Area-PSReadline`: PSReadLine related issues
+* `Area-Providers`: PowerShell providers like FileSystem, Certificates, Registry, etc...
+* `Area-PSReadline`: PSReadline related issues
 * `Area-Remoting`: PSRP issues with any transport layer
+* `Area-Security`: security related areas like [JEA](https://github.com/powershell/JEA)
 * `Area-SideBySide`: side by side support
-* `Area-Test`:issues in a test or in test infrastructure
+* `Area-Test`: issues in a test or in test infrastructure
 
 ### Operating Systems
 
@@ -62,24 +68,19 @@ These are for issues that are specific to certain Operating Systems:
 
 ### Process Tags
 
-Issues can be in one of the following states:
-* `0 - Backlog` : We've acknowledged the issue but have no immediate plans to address it.
-  If you're looking for a way to contribute, these issues can be a good place to start.
-* `1 - Planning` : The issue requires some design or discussion before coding can begin.
-* `2 - Ready` : Any design or discussion is essentially done, coding has not yet begun.
-* `3 - Working` : The assignee(s) are actively working on the issue.
-* `4 - In Review` : The issue is being reviewed.
-  The assignee(s) are responsible for signing off before the PR will be merged.
-
 The following labels are used on PRs:
 
-* `Review - Needed` : The PR is being reviewed.  Please see [Pull Request - Code Review](../../.github/CONTRIBUTING.md#pull-request-code-review)
+* `Review - Needed` : The PR is being reviewed.  Please see [Pull Request - Code Review](https://github.com/PowerShell/PowerShell/blob/master/.github/CONTRIBUTING.md#pull-request---code-review)
 * `Review - Waiting on Author` : The PR was reviewed by the team and requires changes or comments from the author before being accepted.
 * `Review - Abandoned` : The PR was not updated for significant number of days (the exact number could vary over time).
   Maintainers should look into such PRs and re-evaluate them.
+* `Review - Committee` : The PR/Issue needs a review from [powershell-committee](../community/governance.md#powershell-committee)
 
 ### Miscellaneous labels
 
+* `Committee-Reviewed` : The PR/Issue has been reviewed by the [powershell-committee](../community/governance.md#powershell-committee)
+* `Up-for-Grabs`: We've acknowledged the issue but have no immediate plans to address it.
+  If you're looking for a way to contribute, these issues can be a good place to start.
 * `Blocked`: an issue cannot be addressed due to external factors,
   but should not be closed because those external factors are temporary.
 * `BVT/DRT`: an issue affecting or exposed by tests that have not been open sourced.
@@ -88,3 +89,4 @@ The following labels are used on PRs:
   because they more directly affect the usability of a particular feature or area.
 * `Changelog Needed`: The PR requires an addition to the changelog,
   and should be removed when it has been added.
+* `Documentation Needed` : The PR has changes that require a documentation change or new documentation added to [PowerShell-Docs](http://github.com/powershell/powershell-docs)

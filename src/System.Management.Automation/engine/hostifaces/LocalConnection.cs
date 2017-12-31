@@ -16,12 +16,8 @@ using System.Diagnostics.CodeAnalysis; // for fxcop
 using Dbg = System.Management.Automation.Diagnostics;
 using System.Diagnostics;
 using System.Linq;
+#if LEGACYTELEMETRY
 using Microsoft.PowerShell.Telemetry.Internal;
-
-
-#if CORECLR
-// Use stubs for SerializableAttribute and ISerializable related types
-using Microsoft.PowerShell.CoreClr.Stubs;
 #endif
 
 #pragma warning disable 1634, 1691 // Stops compiler from warning about unknown warnings
@@ -36,7 +32,7 @@ namespace System.Management.Automation.Runspaces
         #region constructors
 
         /// <summary>
-        /// Construct an instance of an Runspace using a custom implementation 
+        /// Construct an instance of an Runspace using a custom implementation
         /// of PSHost.
         /// </summary>
         /// <param name="host">
@@ -52,7 +48,7 @@ namespace System.Management.Automation.Runspaces
         }
 
         /// <summary>
-        /// Construct an instance of an Runspace using a custom implementation 
+        /// Construct an instance of an Runspace using a custom implementation
         /// of PSHost.
         /// </summary>
         /// <param name="host">
@@ -71,7 +67,7 @@ namespace System.Management.Automation.Runspaces
         }
 
         /// <summary>
-        /// Construct an instance of an Runspace using a custom implementation 
+        /// Construct an instance of an Runspace using a custom implementation
         /// of PSHost.
         /// </summary>
         /// <param name="host">
@@ -88,10 +84,10 @@ namespace System.Management.Automation.Runspaces
         #endregion  constructors
 
         /// <summary>
-        /// Private data to be used by applications built on top of PowerShell.  
-        /// 
+        /// Private data to be used by applications built on top of PowerShell.
+        ///
         /// Local runspace pool is created with application private data set to an empty <see cref="PSPrimitiveDictionary"/>.
-        /// 
+        ///
         /// Runspaces that are part of a <see cref="RunspacePool"/> inherit application private data from the pool.
         /// </summary>
         public override PSPrimitiveDictionary GetApplicationPrivateData()
@@ -172,7 +168,7 @@ namespace System.Management.Automation.Runspaces
 #if CORECLR                 // No ApartmentState.STA Support In CoreCLR
                             bool allowed = value == PSThreadOptions.ReuseThread;
 #else
-                            // if the runspace is already opened we only allow changing the options if 
+                            // if the runspace is already opened we only allow changing the options if
                             // the apartment state is MTA and the new value is ReuseThread
                             bool allowed = (this.ApartmentState == ApartmentState.MTA || this.ApartmentState == ApartmentState.Unknown) // Unknown is the same as MTA
                                            &&
@@ -232,7 +228,7 @@ namespace System.Management.Automation.Runspaces
         #region protected_methods
 
         /// <summary>
-        /// Create a pipeline from a command string 
+        /// Create a pipeline from a command string
         /// </summary>
         /// <param name="command">A valid command string. Can be null</param>
         /// <param name="addToHistory">if true command is added to history</param>
@@ -380,11 +376,11 @@ namespace System.Management.Automation.Runspaces
             }
         }
 
-        private static string s_debugPreferenceCachePath = Path.Combine(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "WindowsPowerShell"), "DebugPreference.clixml");
+        private static string s_debugPreferenceCachePath = Path.Combine(Path.Combine(Platform.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "WindowsPowerShell"), "DebugPreference.clixml");
         private static object s_debugPreferenceLockObject = new object();
 
         /// <summary>
-        /// DebugPreference serves as a property bag to keep 
+        /// DebugPreference serves as a property bag to keep
         /// track of all process specific debug preferences.
         /// </summary>
         public class DebugPreference
@@ -450,12 +446,12 @@ namespace System.Management.Automation.Runspaces
                             }
                             else
                             {
-                                // In this case, the cache contains the process name, hence we check the list of 
+                                // In this case, the cache contains the process name, hence we check the list of
                                 // app domains for which the debug preference is set to enable.
                                 DebugPreference processDebugPreference = GetProcessSpecificDebugPreference(debugPreferenceCache[processName]);
 
                                 // processDebugPreference would point to null if debug preference is enabled for all app domains.
-                                // If processDebugPreference is not null then it means that user has selected specific 
+                                // If processDebugPreference is not null then it means that user has selected specific
                                 // appdomins for which the debug preference has to be enabled.
                                 if (processDebugPreference != null)
                                 {
@@ -497,7 +493,7 @@ namespace System.Management.Automation.Runspaces
                                     DebugPreference processDebugPreference = GetProcessSpecificDebugPreference(debugPreferenceCache[processName]);
 
                                     // processDebugPreference would point to null if debug preference is enabled for all app domains.
-                                    // If processDebugPreference is not null then it means that user has selected specific 
+                                    // If processDebugPreference is not null then it means that user has selected specific
                                     // appdomins for which the debug preference has to be enabled.
                                     if (processDebugPreference != null)
                                     {
@@ -510,7 +506,7 @@ namespace System.Management.Automation.Runspaces
                                             {
                                                 if (cachedAppDomainNames.Contains(currentAppDomainName, StringComparer.OrdinalIgnoreCase))
                                                 {
-                                                    // remove requested appdomains debug preference details. 
+                                                    // remove requested appdomains debug preference details.
                                                     cachedAppDomainNames.Remove(currentAppDomainName);
                                                     iscacheUpdated = true;
                                                 }
@@ -552,11 +548,11 @@ namespace System.Management.Automation.Runspaces
         }
 
         /// <summary>
-        /// GetDebugPreferenceCache is a helper method used to fetch 
+        /// GetDebugPreferenceCache is a helper method used to fetch
         /// the debug preference cache contents as a Hashtable.
         /// </summary>
         /// <param name="runspace">Runspace</param>
-        /// <returns>If the Debug preference is persisted then a hashtable containing 
+        /// <returns>If the Debug preference is persisted then a hashtable containing
         /// the debug preference is returned or else Null is returned.</returns>
         private static Hashtable GetDebugPreferenceCache(Runspace runspace)
         {
@@ -632,9 +628,8 @@ namespace System.Management.Automation.Runspaces
             {
                 DoOpenHelper();
             }
-            catch (Exception exception) // ignore non-severe exceptions
+            catch (Exception)
             {
-                CommandProcessorBase.CheckForSevereException(exception);
                 //This exception is reported by raising RunspaceState
                 //change event.
             }
@@ -686,7 +681,6 @@ namespace System.Management.Automation.Runspaces
             }
             catch (Exception exception)
             {
-                CommandProcessorBase.CheckForSevereException(exception);
                 s_runspaceInitTracer.WriteLine("Runspace open failed");
 
                 //Log engine health event
@@ -705,7 +699,7 @@ namespace System.Management.Automation.Runspaces
                 //Raise the event
                 RaiseRunspaceStateEvents();
 
-                //Rethrow the exception. For asynchronous execution, 
+                //Rethrow the exception. For asynchronous execution,
                 //OpenThreadProc will catch it. For synchronous execution
                 //caller of open will catch it.
                 throw;
@@ -738,14 +732,16 @@ namespace System.Management.Automation.Runspaces
                     // Raise the event
                     RaiseRunspaceStateEvents();
 
-                    // Throw the exception. For asynchronous execution, 
+                    // Throw the exception. For asynchronous execution,
                     // OpenThreadProc will catch it. For synchronous execution
                     // caller of open will catch it.
                     throw initError;
                 }
             }
 
+#if LEGACYTELEMETRY
             TelemetryAPI.ReportLocalSessionCreated(InitialSessionState, TranscriptionData);
+#endif
         }
 
         /// <summary>
@@ -840,9 +836,8 @@ namespace System.Management.Automation.Runspaces
             {
                 DoCloseHelper();
             }
-            catch (Exception exception) // ignore non-severe exceptions
+            catch (Exception)
             {
-                CommandProcessorBase.CheckForSevereException(exception);
             }
 #pragma warning restore 56500
         }
@@ -851,7 +846,7 @@ namespace System.Management.Automation.Runspaces
         /// Close the runspace.
         /// </summary>
         /// <remarks>
-        /// Attempts to create/execute pipelines after a call to 
+        /// Attempts to create/execute pipelines after a call to
         /// close will fail.
         /// </remarks>
         private void DoCloseHelper()
@@ -872,12 +867,24 @@ namespace System.Management.Automation.Runspaces
                 }
 
                 if ((hostRunspace == null) || (this == hostRunspace))
-                {
+                {                   
+                    // We should close transcripting only if we are closing the last opened runspace.
+                    foreach (Runspace runspace in RunspaceList)
+                    {
+                        // At this stage, the last opened runspace should be at closing state.
+                        if (runspace.RunspaceStateInfo.State == RunspaceState.Opened)
+                        {
+                            return;
+                        }
+                    }
+
                     PSHostUserInterface host = executionContext.EngineHostInterface.UI;
                     if (host != null)
                     {
                         host.StopAllTranscribing();
                     }
+
+                    AmsiUtils.Uninitialize();
                 }
             }
 
@@ -887,10 +894,10 @@ namespace System.Management.Automation.Runspaces
 
             //Stop all running pipelines
 
-            //Note:Do not perform the Cancel in lock. Reason is 
-            //Pipeline executes in separate thread, say threadP. 
-            //When pipeline is canceled/failed/completed in 
-            //Pipeline.ExecuteThreadProc it removes the pipeline 
+            //Note:Do not perform the Cancel in lock. Reason is
+            //Pipeline executes in separate thread, say threadP.
+            //When pipeline is canceled/failed/completed in
+            //Pipeline.ExecuteThreadProc it removes the pipeline
             //from the list of running pipelines. threadP will need
             //lock to remove the pipelines from the list of running pipelines
             //And we will deadlock.
@@ -904,7 +911,7 @@ namespace System.Management.Automation.Runspaces
             // Disconnect all disconnectable jobs in the job repository.
             StopOrDisconnectAllJobs();
 
-            // Close or disconnect all the remote runspaces available in the 
+            // Close or disconnect all the remote runspaces available in the
             // runspace repository.
             CloseOrDisconnectAllRemoteRunspaces(() =>
                 {
@@ -917,16 +924,13 @@ namespace System.Management.Automation.Runspaces
                     return runspaces;
                 });
 
-            //Notify Engine components that that runspace is closing. 
+            //Notify Engine components that that runspace is closing.
             _engine.Context.RunspaceClosingNotification();
 
             //Log engine lifecycle event.
             MshLog.LogEngineLifecycleEvent(_engine.Context, EngineState.Stopped);
-
-            // Uninitialize the AMSI scan interface
-            AmsiUtils.Uninitialize();
-
-            //All pipelines have been canceled. Close the runspace.               
+  
+            //All pipelines have been canceled. Close the runspace.
             _engine = null;
             _commandFactory = null;
 
@@ -936,6 +940,8 @@ namespace System.Management.Automation.Runspaces
             RaiseRunspaceStateEvents();
 
             // Report telemetry if we have no more open runspaces.
+
+#if LEGACYTELEMETRY
             bool allRunspacesClosed = true;
             bool hostProvidesExitTelemetry = false;
             foreach (var r in Runspace.RunspaceList)
@@ -956,11 +962,12 @@ namespace System.Management.Automation.Runspaces
             {
                 TelemetryAPI.ReportExitTelemetry(null);
             }
+#endif
         }
 
         /// <summary>
         /// Closes or disconnects all the remote runspaces passed in by the getRunspace
-        /// function.  If a remote runspace supports disconnect then it will be disconnected 
+        /// function.  If a remote runspace supports disconnect then it will be disconnected
         /// rather than closed.
         /// </summary>
         private void CloseOrDisconnectAllRemoteRunspaces(Func<List<RemoteRunspace>> getRunspaces)
@@ -1270,6 +1277,8 @@ namespace System.Management.Automation.Runspaces
                         RunspaceOpening = null;
                     }
 
+                    Platform.RemoveTemporaryDirectory();
+
                     // Dispose the event manager
                     if (this.ExecutionContext != null && this.ExecutionContext.Events != null)
                     {
@@ -1477,15 +1486,15 @@ namespace System.Management.Automation.Runspaces
                 // If the runspace is currently in a disconnected state then leave it
                 // as is.
 
-                // in this case, calling a close won't raise any events. Simply raise 
+                // in this case, calling a close won't raise any events. Simply raise
                 // the OperationCompleted event. After the if check, but before we
-                // get to this point if the state was changed, then the StateChanged 
+                // get to this point if the state was changed, then the StateChanged
                 // event handler will anyway raise the event and so we are fine
                 RaiseOperationCompleteEvent();
             }
             else
             {
-                // If the runspace supports disconnect semantics and is running a command, 
+                // If the runspace supports disconnect semantics and is running a command,
                 // then disconnect it rather than closing it.
                 if (_remoteRunspace.CanDisconnect &&
                     _remoteRunspace.GetCurrentlyRunningPipeline() != null)

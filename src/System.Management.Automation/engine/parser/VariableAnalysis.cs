@@ -175,7 +175,7 @@ namespace System.Management.Automation.Language
                         // slot in the tuple.  This only matters for value types where we allow
                         // comparisons with $null and don't try to convert the $null value to the
                         // valuetype because the parameter has no value yet.  For example:
-                        //     & { param([System.Reflection.MemberTypes]$m) ($m -eq $null) }
+                        //     & { param([System.Reflection.MemberTypes]$m) ($null -eq $m) }
                         object unused;
                         if (!Compiler.TryGetDefaultParameterValue(analysisDetails.Type, out unused))
                         {
@@ -318,11 +318,11 @@ namespace System.Management.Automation.Language
         internal const int Unanalyzed = -1;
 
         // In some cases, we want to force a variable to not be allocated in the tuple, but instead use the variable
-        // table along with a PSVariable instance.  For example, 
+        // table along with a PSVariable instance.  For example,
         //    1. if a variable's type might change in the same scope;
-        //    2. if there might be any validation attributes or more than one argument conversion 
+        //    2. if there might be any validation attributes or more than one argument conversion
         //    3. if there is one argument conversion but the conversion type cannot be resolved at compile time (it's
-        //       possible that the assembly containing the type would be loaded during runtime) 
+        //       possible that the assembly containing the type would be loaded during runtime)
         // in these cases, we rely on the setter PSVariable.Value to handle those attributes.
         internal const int ForceDynamic = -2;
 
@@ -456,12 +456,6 @@ namespace System.Management.Automation.Language
             {
                 Diagnostics.Assert(false, "This code is unreachable.");
                 return AstVisitAction.Continue;
-            }
-
-            internal override IEnumerable<PSTypeName> GetInferredType(CompletionContext context)
-            {
-                Diagnostics.Assert(false, "This code is unreachable.");
-                return Ast.EmptyPSTypeNameArray;
             }
         }
 
@@ -697,8 +691,8 @@ namespace System.Management.Automation.Language
             // However, $? is not a real automatic variable from 'SpecialVariables.AutomaticVariables'
             // even though it's marked as so, and thus we need to exclude it.
             var orderedLocals = (from details in _variables.Values
-                                 where (details.LocalTupleIndex >= 0 || (details.LocalTupleIndex == ForceDynamic && 
-                                                                         details.Automatic && 
+                                 where (details.LocalTupleIndex >= 0 || (details.LocalTupleIndex == ForceDynamic &&
+                                                                         details.Automatic &&
                                                                          details.Name != SpecialVariables.Question))
                                  orderby details.LocalTupleIndex
                                  select details).ToArray();

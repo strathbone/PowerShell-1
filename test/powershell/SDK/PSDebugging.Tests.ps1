@@ -38,7 +38,7 @@ Describe "PowerShell Command Debugging" -tags "CI" {
     }
 
     It "Should be able to step into debugging" {
-        $debugfn = NewProcessStartInfo "-noprofile ""`$function:foo = { 'bar' }""" -RedirectStdIn
+        $debugfn = NewProcessStartInfo "-noprofile -c ""`$function:foo = { 'bar' }""" -RedirectStdIn
         $process = RunPowerShell $debugfn
         $process.StandardInput.Write("Set-PsBreakpoint -command foo`n")
 
@@ -57,7 +57,7 @@ Describe "PowerShell Command Debugging" -tags "CI" {
     }
 
     It "Should be able to continue into debugging" {
-        $debugfn = NewProcessStartInfo "-noprofile ""`$function:foo = { 'bar' }""" -RedirectStdIn
+        $debugfn = NewProcessStartInfo "-noprofile -c ""`$function:foo = { 'bar' }""" -RedirectStdIn
         $process = RunPowerShell $debugfn
         $process.StandardInput.Write("Set-PsBreakpoint -command foo`n")
 
@@ -74,7 +74,7 @@ Describe "PowerShell Command Debugging" -tags "CI" {
     }
 
     It -Pending "Should be able to list help for debugging" {
-        $debugfn = NewProcessStartInfo "-noprofile ""`$function:foo = { 'bar' }""" -RedirectStdIn
+        $debugfn = NewProcessStartInfo "-noprofile -c ""`$function:foo = { 'bar' }""" -RedirectStdIn
         $process = RunPowerShell $debugfn
         $process.StandardInput.Write("Set-PsBreakpoint -command foo`n")
 
@@ -97,7 +97,7 @@ Describe "PowerShell Command Debugging" -tags "CI" {
 
 
     It "Should be able to step over debugging" {
-        $debugfn = NewProcessStartInfo "-noprofile ""`$function:foo = { 'bar' }""" -RedirectStdIn
+        $debugfn = NewProcessStartInfo "-noprofile -c ""`$function:foo = { 'bar' }""" -RedirectStdIn
         $process = RunPowerShell $debugfn
         $process.StandardInput.Write("Set-PsBreakpoint -command foo`n")
 
@@ -114,7 +114,7 @@ Describe "PowerShell Command Debugging" -tags "CI" {
 
 
     It "Should be able to step out of debugging" {
-        $debugfn = NewProcessStartInfo "-noprofile ""`$function:foo = { 'bar' }""" -RedirectStdIn
+        $debugfn = NewProcessStartInfo "-noprofile -c ""`$function:foo = { 'bar' }""" -RedirectStdIn
         $process = RunPowerShell $debugfn
         $process.StandardInput.Write("Set-PsBreakpoint -command foo`n")
 
@@ -128,7 +128,7 @@ Describe "PowerShell Command Debugging" -tags "CI" {
     }
 
     It "Should be able to quit debugging" {
-        $debugfn = NewProcessStartInfo "-noprofile ""`$function:foo = { 'bar' }""" -RedirectStdIn
+        $debugfn = NewProcessStartInfo "-noprofile -c ""`$function:foo = { 'bar' }""" -RedirectStdIn
         $process = RunPowerShell $debugfn
         $process.StandardInput.Write("Set-PsBreakpoint -command foo`n")
 
@@ -142,7 +142,7 @@ Describe "PowerShell Command Debugging" -tags "CI" {
     }
 
     It -Pending "Should be able to list source code in debugging" {
-        $debugfn = NewProcessStartInfo "-noprofile ""`$function:foo = { 'bar' }""" -RedirectStdIn
+        $debugfn = NewProcessStartInfo "-noprofile -c ""`$function:foo = { 'bar' }""" -RedirectStdIn
         $process = RunPowerShell $debugfn
         $process.StandardInput.Write("Set-PsBreakpoint -command foo`n") | Write-Host
 
@@ -165,7 +165,7 @@ Describe "PowerShell Command Debugging" -tags "CI" {
 
 
     It -Pending "Should be able to get the call stack in debugging" {
-        $debugfn = NewProcessStartInfo "-noprofile ""`$function:foo = { 'bar' }""" -RedirectStdIn
+        $debugfn = NewProcessStartInfo "-noprofile -c ""`$function:foo = { 'bar' }""" -RedirectStdIn
         $process = RunPowerShell $debugfn
         $process.StandardInput.Write("Set-PsBreakpoint -command foo`n") | Write-Host
 
@@ -201,7 +201,7 @@ Describe "Runspace Debugging API tests" -tag CI {
             $runspace.Dispose()
             $ps.dispose()
         }
-        
+
         It "PSStandaloneMonitorRunspaceInfo should throw when called with a null argument to the constructor" {
             try {
                 [PSStandaloneMonitorRunspaceInfo]::new($null)
@@ -241,7 +241,7 @@ Describe "Runspace Debugging API tests" -tag CI {
                 [DebuggerUtils]::StartMonitoringRunspace($null,$runspaceInfo)
                 throw "Execution should have thrown"
             }
-            catch { 
+            catch {
                 $_.fullyqualifiederrorid | should be PSArgumentNullException
             }
         }
@@ -250,7 +250,7 @@ Describe "Runspace Debugging API tests" -tag CI {
                 [DebuggerUtils]::StartMonitoringRunspace($runspace.Debugger,$null)
                 throw "Execution should have thrown"
             }
-            catch { 
+            catch {
                 $_.fullyqualifiederrorid | should be PSArgumentNullException
             }
         }
@@ -260,7 +260,7 @@ Describe "Runspace Debugging API tests" -tag CI {
                 [DebuggerUtils]::EndMonitoringRunspace($null,$runspaceInfo)
                 throw "Execution should have thrown"
             }
-            catch { 
+            catch {
                 $_.fullyqualifiederrorid | should be PSArgumentNullException
             }
         }
@@ -269,7 +269,7 @@ Describe "Runspace Debugging API tests" -tag CI {
                 [DebuggerUtils]::EndMonitoringRunspace($runspace.Debugger,$null)
                 throw "Execution should have thrown"
             }
-            catch { 
+            catch {
                 $_.fullyqualifiederrorid | should be PSArgumentNullException
             }
         }

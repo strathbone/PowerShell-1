@@ -102,7 +102,7 @@ namespace System.Management.Automation.Runspaces
                             .AddScriptBlockExpressionBinding(@"function GetParam
 {
     if(-not $_.Parameters) { return $null }
-    $_.Parameters.Parameter | % {
+    $_.Parameters.Parameter | ForEach-Object {
         if($_.type) { $param = ""[$($_.type.name)] `$$($_.name), "" }
         else { $param = ""[object] `$$($_.name), "" }
         $params += $param
@@ -141,7 +141,7 @@ if (($_.relatedLinks -ne $()) -and ($_.relatedLinks.navigationLink -ne $()) -and
                         .AddScriptBlockExpressionBinding(
 @"$optional = $_.required -ne 'true'
 $positional = (($_.position -ne $()) -and ($_.position -ne '') -and ($_.position -notmatch 'named') -and ([int]$_.position -ne $()))
-$parameterValue = if ($null -ne $_.psobject.Members['ParameterValueGroup']) { 
+$parameterValue = if ($null -ne $_.psobject.Members['ParameterValueGroup']) {
     "" {$($_.ParameterValueGroup.ParameterValue -join ' | ')}""
 } elseif ($null -ne $_.psobject.Members['ParameterValue']) {
     "" <$($_.ParameterValue)>""

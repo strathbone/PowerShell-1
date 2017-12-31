@@ -14,11 +14,6 @@ using System.Management.Automation.Tracing;
 using System.Management.Automation.Language;
 using Dbg = System.Management.Automation.Diagnostics;
 
-#if CORECLR
-// Use stubs for SerializableAttribute and ISerializable related types.
-using Microsoft.PowerShell.CoreClr.Stubs;
-#endif
-
 // Stops compiler from warning about unknown warnings
 #pragma warning disable 1634, 1691
 
@@ -33,7 +28,7 @@ namespace System.Management.Automation
     /// implementations of the same, it is required to have a
     /// new class that will have the extended functionality. This
     /// is to ensure that backwards compatibility is maintained
-    /// 
+    ///
     /// However, this class will derive from the existing Job
     /// class. The option of deprecating the existing class was
     /// considered as well. In order to maintain backwards
@@ -48,7 +43,7 @@ namespace System.Management.Automation
     /// asynchronous support can be provided:
     ///     1. Classical pattern (Begin and End)
     ///     2. Event based pattern
-    ///     
+    ///
     /// Although the PowerShell API uses the classical pattern
     /// and we would like the Job API and PowerShell API to be
     /// as close as possible, the classical pattern is inherently
@@ -58,7 +53,7 @@ namespace System.Management.Automation
         #region Private Members
 
         /// <summary>
-        /// These are the parameters that can be used by a job 
+        /// These are the parameters that can be used by a job
         /// implementation when they want to specify parameters
         /// to start a job
         /// </summary>
@@ -82,7 +77,7 @@ namespace System.Management.Automation
         #region Properties
 
         /// <summary>
-        /// Parameters to be used to start a job. 
+        /// Parameters to be used to start a job.
         /// This is a property because CommandParameterCollection
         /// does not have a public constructor. Hence the
         /// infrastructure creates an instance and provides
@@ -121,7 +116,7 @@ namespace System.Management.Automation
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         protected object SyncRoot
         {
@@ -227,13 +222,13 @@ namespace System.Management.Automation
 
         /// <summary>
         /// Event to be raise when the start job activity is completed.
-        /// This event should not be raised for 
+        /// This event should not be raised for
         /// synchronous operation
         /// </summary>
         public event EventHandler<AsyncCompletedEventArgs> StartJobCompleted;
 
         /// <summary>
-        /// Method which can be extended or called by derived 
+        /// Method which can be extended or called by derived
         /// classes to raise the event when start of
         /// the job is completed
         /// </summary>
@@ -246,7 +241,7 @@ namespace System.Management.Automation
 
         /// <summary>
         /// Method which can be extended or called by derived
-        /// classes to raise the event when stopping a 
+        /// classes to raise the event when stopping a
         /// job is completed
         /// </summary>
         /// <param name="eventArgs">argument describing
@@ -257,8 +252,8 @@ namespace System.Management.Automation
         }
 
         /// <summary>
-        /// Method which can be extended or called by derived 
-        /// classes to raise the event when suspending a 
+        /// Method which can be extended or called by derived
+        /// classes to raise the event when suspending a
         /// job is completed
         /// </summary>
         /// <param name="eventArgs">argument describing
@@ -282,7 +277,7 @@ namespace System.Management.Automation
 
         /// <summary>
         /// Method which can be extended or called by derived
-        /// classes to raise the event when unblocking a 
+        /// classes to raise the event when unblocking a
         /// blocked job is completed
         /// </summary>
         /// <param name="eventArgs">argument describing
@@ -293,10 +288,10 @@ namespace System.Management.Automation
         }
 
         /// <summary>
-        /// Raises the appropriate event based on the operation 
+        /// Raises the appropriate event based on the operation
         /// and the associated event arguments
         /// </summary>
-        /// <param name="operation">operation for which the event 
+        /// <param name="operation">operation for which the event
         /// needs to be raised</param>
         /// <param name="eventArgs"></param>
         private void RaiseCompletedHandler(int operation, AsyncCompletedEventArgs eventArgs)
@@ -351,7 +346,6 @@ namespace System.Management.Automation
             {
                 // errors in the handlers are not errors in the operation
                 // silently ignore them
-                CommandProcessorBase.CheckForSevereException(exception);
                 _tracer.TraceException(exception);
             }
 #pragma warning restore 56500
@@ -363,8 +357,8 @@ namespace System.Management.Automation
         public abstract void StopJobAsync();
 
         /// <summary>
-        /// Event to be raised when the asynchronous stopping of a job 
-        /// is completed.This event should not be raised for 
+        /// Event to be raised when the asynchronous stopping of a job
+        /// is completed.This event should not be raised for
         /// synchronous operation
         /// </summary>
         public event EventHandler<AsyncCompletedEventArgs> StopJobCompleted;
@@ -381,7 +375,7 @@ namespace System.Management.Automation
 
         /// <summary>
         /// This event should be raised whenever the asynchronous suspend of
-        /// a job is completed. This event should not be raised for 
+        /// a job is completed. This event should not be raised for
         /// synchronous operation
         /// </summary>
         public event EventHandler<AsyncCompletedEventArgs> SuspendJobCompleted;
@@ -397,8 +391,8 @@ namespace System.Management.Automation
         public abstract void ResumeJobAsync();
 
         /// <summary>
-        /// This event should be raised whenever the asynchronous resume of 
-        /// a suspended job is completed. This event should not be raised for 
+        /// This event should be raised whenever the asynchronous resume of
+        /// a suspended job is completed. This event should not be raised for
         /// synchronous operation
         /// </summary>
         public event EventHandler<AsyncCompletedEventArgs> ResumeJobCompleted;
@@ -443,7 +437,7 @@ namespace System.Management.Automation
 
         /// <summary>
         /// This event should be raised whenever the asynchronous unblock
-        /// of a blocked job is completed. This event should not be raised for 
+        /// of a blocked job is completed. This event should not be raised for
         /// synchronous operation
         /// </summary>
         public event EventHandler<AsyncCompletedEventArgs> UnblockJobCompleted;
@@ -469,7 +463,7 @@ namespace System.Management.Automation
         UseThreadPoolThread = 1,
 
         /// <summary>
-        /// Create a new thread everything and reuse 
+        /// Create a new thread everything and reuse
         /// </summary>
         UseNewThread = 2,
     }
@@ -673,7 +667,7 @@ namespace System.Management.Automation
         }
 
         /// <summary>
-        /// Create a container parent job with the specified command, name, 
+        /// Create a container parent job with the specified command, name,
         /// job type strings.
         /// </summary>
         /// <param name="command">Command string</param>
@@ -729,9 +723,9 @@ namespace System.Management.Automation
         {
             get
             {
-                // moreData is initially set to true, and it 
-                // will remain so until the async result 
-                // object has completed execution. 
+                // moreData is initially set to true, and it
+                // will remain so until the async result
+                // object has completed execution.
                 if (_moreData && IsFinishedState(JobStateInfo.State))
                 {
                     bool atleastOneChildHasMoreData = false;
@@ -854,7 +848,7 @@ namespace System.Management.Automation
                 _tracer.WriteMessage(TraceClassName, "StartJob", Guid.Empty, this,
                     "Child job asynchronously, child InstanceId: {0}", job.InstanceId.ToString());
 
-                // This child job is created to run synchronously and so can be debugged.  Set 
+                // This child job is created to run synchronously and so can be debugged.  Set
                 // the IJobDebugger.IsAsync accordingly.
                 ScriptDebugger.SetDebugJobAsync(job as IJobDebugger, false);
                 job.StartJobAsync();
@@ -871,7 +865,7 @@ namespace System.Management.Automation
             if (ExecutionError.Count > 0)
             {
                 // Check to see expected behavior if one child job fails to start.
-            } 
+            }
 
             if (ExecutionError.Count == 1)
             {
@@ -1889,7 +1883,7 @@ namespace System.Management.Automation
 
 
                 // Ignore state changes which are not resulting in state change to finished.
-                // State will be Running once at least one child is running.               
+                // State will be Running once at least one child is running.
                 if ((e.JobStateInfo.State != JobState.Completed && e.JobStateInfo.State != JobState.Failed) && e.JobStateInfo.State != JobState.Stopped)
                 {
                     if (e.JobStateInfo.State == JobState.Running)
@@ -1906,7 +1900,7 @@ namespace System.Management.Automation
                 if (e.JobStateInfo.State == JobState.Failed)
                 {
                     // If any of the child job failed, we set status to failed
-                    // we can set it right now and 
+                    // we can set it right now and
                     Interlocked.Increment(ref failedChildJobsCount);
                 }
 
@@ -1973,7 +1967,7 @@ namespace System.Management.Automation
         #endregion finish logic
 
         /// <summary>
-        /// Release all the resources. 
+        /// Release all the resources.
         /// </summary>
         /// <param name="disposing">
         /// if true, release all the managed objects.

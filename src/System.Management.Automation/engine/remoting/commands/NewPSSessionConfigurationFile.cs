@@ -10,18 +10,11 @@ using System.Diagnostics;
 using System.Management.Automation.Internal;
 using System.Globalization;
 
-#if CORECLR
-// Some APIs are missing from System.Environment. We use System.Management.Automation.Environment as a proxy type:
-//  - for missing APIs, System.Management.Automation.Environment has extension implementation.
-//  - for existing APIs, System.Management.Automation.Environment redirect the call to System.Environment.
-using Environment = System.Management.Automation.Environment;
-#endif
-
 namespace Microsoft.PowerShell.Commands
 {
     /// <summary>
     /// New-PSSessionConfigurationFile command implementation
-    /// 
+    ///
     /// See Declarative Initial Session State (DISC)
     /// </summary>
     [Cmdlet(VerbsCommon.New, "PSSessionConfigurationFile", HelpUri = "https://go.microsoft.com/fwlink/?LinkID=217036")]
@@ -199,7 +192,7 @@ namespace Microsoft.PowerShell.Commands
 
         /// <summary>
         /// Creates a User PSDrive in the session.
-        /// The User drive is used with Copy-Item for file transfer when the FileSystem provider is 
+        /// The User drive is used with Copy-Item for file transfer when the FileSystem provider is
         /// not visible in the session.
         /// </summary>
         [Parameter()]
@@ -665,7 +658,7 @@ namespace Microsoft.PowerShell.Commands
                 {
                     if (String.IsNullOrEmpty(_copyright))
                     {
-                        _copyright = StringUtil.Format(Modules.DefaultCopyrightMessage, DateTime.Now.Year, _author);
+                        _copyright = StringUtil.Format(Modules.DefaultCopyrightMessage, _author);
                     }
                     result.Append(SessionConfigurationUtils.ConfigFragment(ConfigFileConstants.Copyright, RemotingErrorIdStrings.DISCCopyrightComment,
                         SessionConfigurationUtils.QuoteName(_copyright), streamWriter, false));
@@ -735,7 +728,7 @@ namespace Microsoft.PowerShell.Commands
                 if (_roleDefinitions == null)
                 {
                     result.Append(SessionConfigurationUtils.ConfigFragment(ConfigFileConstants.RoleDefinitions, RemotingErrorIdStrings.DISCRoleDefinitionsComment,
-                        "@{ 'CONTOSO\\SqlAdmins' = @{ RoleCapabilities = 'SqlAdministration' }; 'CONTOSO\\ServerMonitors' = @{ VisibleCmdlets = 'Get-Process' } } ", streamWriter, true));
+                        "@{ 'CONTOSO\\SqlAdmins' = @{ RoleCapabilities = 'SqlAdministration' }; 'CONTOSO\\SqlManaged' = @{ RoleCapabilityFiles = 'C:\\RoleCapability\\SqlManaged.psrc' }; 'CONTOSO\\ServerMonitors' = @{ VisibleCmdlets = 'Get-Process' } } ", streamWriter, true));
                 }
                 else
                 {
@@ -1071,7 +1064,7 @@ namespace Microsoft.PowerShell.Commands
 
     /// <summary>
     /// New-PSRoleCapabilityFile command implementation
-    /// 
+    ///
     /// Creates a role capability file suitable for use in a Role Capability (which can be referenced in a Session Configuration file)
     /// </summary>
     [Cmdlet(VerbsCommon.New, "PSRoleCapabilityFile", HelpUri = "https://go.microsoft.com/fwlink/?LinkId=623708")]
@@ -1440,7 +1433,7 @@ namespace Microsoft.PowerShell.Commands
         #region Overrides
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         protected override void ProcessRecord()
         {
@@ -1512,7 +1505,7 @@ namespace Microsoft.PowerShell.Commands
                 // Copyright
                 if (String.IsNullOrEmpty(_copyright))
                 {
-                    _copyright = StringUtil.Format(Modules.DefaultCopyrightMessage, DateTime.Now.Year, _author);
+                    _copyright = StringUtil.Format(Modules.DefaultCopyrightMessage, _author);
                 }
                 result.Append(SessionConfigurationUtils.ConfigFragment(ConfigFileConstants.Copyright, RemotingErrorIdStrings.DISCCopyrightComment,
                     SessionConfigurationUtils.QuoteName(_copyright), streamWriter, false));

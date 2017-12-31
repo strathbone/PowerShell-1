@@ -49,7 +49,7 @@ namespace Microsoft.PowerShell.Commands.Internal.Format
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="formatFiles"></param>
         /// <param name="isShared"></param>
@@ -155,7 +155,7 @@ namespace Microsoft.PowerShell.Commands.Internal.Format
 
         /// <summary>
         /// Update a shared formatting database with formatData of 'ExtendedTypeDefinition' type.
-        /// This method should only be called from the FormatTable, where are shared formatting 
+        /// This method should only be called from the FormatTable, where are shared formatting
         /// database is created.
         /// </summary>
         /// <param name="formatData">
@@ -490,7 +490,7 @@ namespace Microsoft.PowerShell.Commands.Internal.Format
             {
                 var builtInGenerators = new Dictionary<string, Tuple<bool, TypeGenerator>>(StringComparer.OrdinalIgnoreCase);
 
-                var psHome = Utils.GetApplicationBase(Utils.DefaultPowerShellShellID);
+                var psHome = Utils.DefaultPowerShellAppBase;
 
                 builtInGenerators.Add(Path.Combine(psHome, "Certificate.format.ps1xml"), GetBuiltin(false, Certificate_Format_Ps1Xml.GetFormatData));
                 builtInGenerators.Add(Path.Combine(psHome, "Diagnostics.Format.ps1xml"), GetBuiltin(false, Diagnostics_Format_Ps1Xml.GetFormatData));

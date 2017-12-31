@@ -54,6 +54,7 @@ namespace Microsoft.PowerShell.Commands
         /// </summary>
         [Parameter(Mandatory = true, ParameterSetName = "Milliseconds", ValueFromPipelineByPropertyName = true)]
         [ValidateRangeAttribute(0, int.MaxValue)]
+        [Alias("ms")]
         public int Milliseconds { get; set; }
 
         #endregion
@@ -71,7 +72,7 @@ namespace Microsoft.PowerShell.Commands
         private bool _stopping = false;
 
         /// <summary>
-        /// This method causes calling thread to sleep for 
+        /// This method causes calling thread to sleep for
         /// specified milliseconds
         /// </summary>
         private void Sleep(int milliSecondsToSleep)
@@ -85,16 +86,12 @@ namespace Microsoft.PowerShell.Commands
             }
             if (_waitHandle != null)
             {
-#if CORECLR //TODO:CORECLR bool WaitOne(int millisecondsTimeout,bool exitContext) is not available on CLR yet
-                _waitHandle.WaitOne(new TimeSpan(0, 0, 0, 0, milliSecondsToSleep));
-#else
-                _waitHandle.WaitOne(new TimeSpan(0, 0, 0, 0, milliSecondsToSleep), true);
-#endif
+                _waitHandle.WaitOne(milliSecondsToSleep, true);
             }
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         protected override void ProcessRecord()
         {

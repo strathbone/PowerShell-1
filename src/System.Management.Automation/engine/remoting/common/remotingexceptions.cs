@@ -4,21 +4,15 @@
 
 using System.Runtime.Serialization;
 using System.Management.Automation.Internal;
-
-#if CORECLR
-// Use stubs for SerializableAttribute, SecurityPermissionAttribute and ISerializable related types.
-using Microsoft.PowerShell.CoreClr.Stubs;
-#else
 using System.Security.Permissions;
-#endif
 
 namespace System.Management.Automation.Remoting
 {
     /// <summary>
     /// This enum defines the error message ids used by the resource manager to get
     /// localized messages.
-    /// 
-    /// Related error ids are organized in a pre-defined range of values. 
+    ///
+    /// Related error ids are organized in a pre-defined range of values.
     /// </summary>
     internal enum PSRemotingErrorId : uint
     {
@@ -26,7 +20,7 @@ namespace System.Management.Automation.Remoting
         DefaultRemotingExceptionMessage = 0,
         OutOfMemory = 1,
 
-        // Pipeline related range: 10-99      
+        // Pipeline related range: 10-99
         PipelineIdsDoNotMatch = 10,
         PipelineNotFoundOnServer = 11,
         PipelineStopped = 12,

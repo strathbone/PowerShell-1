@@ -6,15 +6,10 @@ Copyright (c) Microsoft Corporation.  All rights reserved.
 using System;
 using System.Runtime.Serialization;
 
-#if CORECLR
-// Use stub for SerializableAttribute, SystemException, ThreadAbortException and ISerializable related types.
-using Microsoft.PowerShell.CoreClr.Stubs;
-#endif
-
 namespace Microsoft.PowerShell.Commands
 {
     /// <summary>
-    /// Defines the base class for exceptions thrown by the 
+    /// Defines the base class for exceptions thrown by the
     /// certificate provider when the specified item cannot be located.
     /// </summary>
     [Serializable]
@@ -62,7 +57,7 @@ namespace Microsoft.PowerShell.Commands
         /// <param name="info">
         /// The serialization information.
         /// </param>
-        /// 
+        ///
         /// <param name="context">
         /// The streaming context.
         /// </param>
@@ -137,7 +132,7 @@ namespace Microsoft.PowerShell.Commands
         /// <param name="info">
         /// The serialization information.
         /// </param>
-        /// 
+        ///
         /// <param name="context">
         /// The streaming context.
         /// </param>
@@ -212,7 +207,7 @@ namespace Microsoft.PowerShell.Commands
         /// <param name="info">
         /// The serialization information.
         /// </param>
-        /// 
+        ///
         /// <param name="context">
         /// The streaming context.
         /// </param>
@@ -287,7 +282,7 @@ namespace Microsoft.PowerShell.Commands
         /// <param name="info">
         /// The serialization information.
         /// </param>
-        /// 
+        ///
         /// <param name="context">
         /// The streaming context.
         /// </param>

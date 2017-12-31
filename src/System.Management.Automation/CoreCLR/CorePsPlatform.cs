@@ -16,6 +16,8 @@ namespace System.Management.Automation
     /// </summary>
     public static class Platform
     {
+        private static string _tempDirectory = null;
+
         /// <summary>
         /// True if the current platform is Linux.
         /// </summary>
@@ -23,11 +25,7 @@ namespace System.Management.Automation
         {
             get
             {
-#if CORECLR
                 return RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
-#else
-                return false;
-#endif
             }
         }
 
@@ -38,11 +36,7 @@ namespace System.Management.Automation
         {
             get
             {
-#if CORECLR
                 return RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
-#else
-                return false;
-#endif
             }
         }
 
@@ -53,11 +47,7 @@ namespace System.Management.Automation
         {
             get
             {
-#if CORECLR
                 return RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-#else
-                return true;
-#endif
             }
         }
 
@@ -68,14 +58,10 @@ namespace System.Management.Automation
         {
             get
             {
-#if CORECLR
                 return true;
-#else
-                return false;
-#endif
             }
         }
-        
+
         /// <summary>
         /// True if the underlying system is NanoServer.
         /// </summary>
@@ -83,13 +69,11 @@ namespace System.Management.Automation
         {
             get
             {
-#if !CORECLR
-                return false;
-#elif UNIX
+#if UNIX
                 return false;
 #else
                 if (_isNanoServer.HasValue) { return _isNanoServer.Value; }
-                
+
                 _isNanoServer = false;
                 using (RegistryKey regKey = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Server\ServerLevels"))
                 {
@@ -115,9 +99,7 @@ namespace System.Management.Automation
         {
             get
             {
-#if !CORECLR
-                return false;
-#elif UNIX
+#if UNIX
                 return false;
 #else
                 if (_isIoT.HasValue) { return _isIoT.Value; }
@@ -140,7 +122,6 @@ namespace System.Management.Automation
             }
         }
 
-#if CORECLR
         /// <summary>
         /// True if it is the inbox powershell for NanoServer or IoT.
         /// </summary>
@@ -157,7 +138,7 @@ namespace System.Management.Automation
                 if (IsNanoServer || IsIoT)
                 {
                     _isInbox = string.Equals(
-                        Utils.GetApplicationBase(Utils.DefaultPowerShellShellID),
+                        Utils.DefaultPowerShellAppBase,
                         Utils.GetApplicationBaseFromRegistry(Utils.DefaultPowerShellShellID),
                         StringComparison.OrdinalIgnoreCase);
                 }
@@ -167,12 +148,29 @@ namespace System.Management.Automation
             }
         }
 
-#if !UNIX 
+        /// <summary>
+        /// True if underlying system is Windows Desktop.
+        /// </summary>
+        public static bool IsWindowsDesktop
+        {
+            get
+            {
+#if UNIX
+                return false;
+#else
+                if (_isWindowsDesktop.HasValue) { return _isWindowsDesktop.Value; }
+                
+                _isWindowsDesktop = !IsNanoServer && !IsIoT;
+                return _isWindowsDesktop.Value;
+#endif
+            }
+        }
+
+#if !UNIX
         private static bool? _isNanoServer = null;
         private static bool? _isIoT = null;
         private static bool? _isInbox = null;
-#endif
-
+        private static bool? _isWindowsDesktop = null;
 #endif
 
         // format files
@@ -202,6 +200,41 @@ namespace System.Management.Automation
 #else
             internal const string Home = "USERPROFILE";
 #endif
+        }
+
+        /// <summary>
+        /// Remove the temporary directory created for the current process
+        /// </summary>
+        internal static void RemoveTemporaryDirectory()
+        {
+            if (null == _tempDirectory)
+            {
+                return;
+            }
+
+            try
+            {
+                Directory.Delete(_tempDirectory, true);
+            }
+            catch
+            {
+                // ignore if there is a failure
+            }
+            _tempDirectory = null;
+        }
+
+        /// <summary>
+        /// Get a temporary directory to use for the current process
+        /// </summary>
+        internal static string GetTemporaryDirectory()
+        {
+            if (null != _tempDirectory)
+            {
+                return _tempDirectory;
+            }
+
+            _tempDirectory = PsUtils.GetTemporaryDirectory();
+            return _tempDirectory;
         }
 
 #if UNIX
@@ -234,10 +267,15 @@ namespace System.Management.Automation
             string xdgconfighome = System.Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
             string xdgdatahome = System.Environment.GetEnvironmentVariable("XDG_DATA_HOME");
             string xdgcachehome = System.Environment.GetEnvironmentVariable("XDG_CACHE_HOME");
-            string xdgConfigHomeDefault = Path.Combine(System.Environment.GetEnvironmentVariable("HOME"), ".config", "powershell");
-            string xdgDataHomeDefault = Path.Combine(System.Environment.GetEnvironmentVariable("HOME"), ".local", "share", "powershell");
+            string envHome = System.Environment.GetEnvironmentVariable(CommonEnvVariableNames.Home);
+            if (null == envHome)
+            {
+                envHome = GetTemporaryDirectory();
+            }
+            string xdgConfigHomeDefault = Path.Combine(envHome, ".config", "powershell");
+            string xdgDataHomeDefault = Path.Combine(envHome, ".local", "share", "powershell");
             string xdgModuleDefault = Path.Combine(xdgDataHomeDefault, "Modules");
-            string xdgCacheDefault = Path.Combine(System.Environment.GetEnvironmentVariable("HOME"), ".cache", "powershell");
+            string xdgCacheDefault = Path.Combine(envHome, ".cache", "powershell");
 
             switch (dirpath)
             {
@@ -261,7 +299,15 @@ namespace System.Management.Automation
                         // create the xdg folder if needed
                         if (!Directory.Exists(xdgDataHomeDefault))
                         {
-                            Directory.CreateDirectory(xdgDataHomeDefault);
+                            try
+                            {
+                                Directory.CreateDirectory(xdgDataHomeDefault);
+                            }
+                            catch (UnauthorizedAccessException)
+                            {
+                                //service accounts won't have permission to create user folder
+                                return GetTemporaryDirectory();
+                            }
                         }
                         return xdgDataHomeDefault;
                     }
@@ -277,7 +323,15 @@ namespace System.Management.Automation
                         //xdg values have not been set
                         if (!Directory.Exists(xdgModuleDefault)) //module folder not always guaranteed to exist
                         {
-                            Directory.CreateDirectory(xdgModuleDefault);
+                            try
+                            {
+                                Directory.CreateDirectory(xdgModuleDefault);
+                            }
+                            catch (UnauthorizedAccessException)
+                            {
+                                //service accounts won't have permission to create user folder
+                                return GetTemporaryDirectory();
+                            }
                         }
                         return xdgModuleDefault;
                     }
@@ -296,7 +350,15 @@ namespace System.Management.Automation
                         //xdg values have not been set
                         if (!Directory.Exists(xdgCacheDefault)) //module folder not always guaranteed to exist
                         {
-                            Directory.CreateDirectory(xdgCacheDefault);
+                            try
+                            {
+                                Directory.CreateDirectory(xdgCacheDefault);
+                            }
+                            catch (UnauthorizedAccessException)
+                            {
+                                //service accounts won't have permission to create user folder
+                                return GetTemporaryDirectory();
+                            }
                         }
 
                         return xdgCacheDefault;
@@ -306,7 +368,15 @@ namespace System.Management.Automation
                     {
                         if (!Directory.Exists(Path.Combine(xdgcachehome, "powershell")))
                         {
-                            Directory.CreateDirectory(Path.Combine(xdgcachehome, "powershell"));
+                            try
+                            {
+                                Directory.CreateDirectory(Path.Combine(xdgcachehome, "powershell"));
+                            }
+                            catch (UnauthorizedAccessException)
+                            {
+                                //service accounts won't have permission to create user folder
+                                return GetTemporaryDirectory();
+                            }
                         }
 
                         return Path.Combine(xdgcachehome, "powershell");
@@ -335,6 +405,73 @@ namespace System.Management.Automation
             }
         }
 #endif
+
+        /// <summary>
+        /// The code is copied from the .NET implementation.
+        /// </summary>
+        internal static string GetFolderPath(System.Environment.SpecialFolder folder)
+        {
+            return InternalGetFolderPath(folder);
+        }
+
+        /// <summary>
+        /// The API set 'api-ms-win-shell-shellfolders-l1-1-0.dll' was removed from NanoServer, so we cannot depend on 'SHGetFolderPathW'
+        /// to get the special folder paths. Instead, we need to rely on the basic environment variables to get the special folder paths.
+        /// </summary>
+        /// <returns>
+        /// The path to the specified system special folder, if that folder physically exists on your computer.
+        /// Otherwise, an empty string ("").
+        /// </returns>
+        private static string InternalGetFolderPath(System.Environment.SpecialFolder folder)
+        {
+            string folderPath = null;
+#if UNIX
+            string envHome = System.Environment.GetEnvironmentVariable(Platform.CommonEnvVariableNames.Home);
+            if (null == envHome)
+            {
+                envHome = Platform.GetTemporaryDirectory();
+            }
+            switch (folder)
+            {
+                case System.Environment.SpecialFolder.ProgramFiles:
+                    folderPath = "/bin";
+                    if (!System.IO.Directory.Exists(folderPath)) { folderPath = null; }
+                    break;
+                case System.Environment.SpecialFolder.ProgramFilesX86:
+                    folderPath = "/usr/bin";
+                    if (!System.IO.Directory.Exists(folderPath)) { folderPath = null; }
+                    break;
+                case System.Environment.SpecialFolder.System:
+                case System.Environment.SpecialFolder.SystemX86:
+                    folderPath = "/sbin";
+                    if (!System.IO.Directory.Exists(folderPath)) { folderPath = null; }
+                    break;
+                case System.Environment.SpecialFolder.Personal:
+                    folderPath = envHome;
+                    break;
+                case System.Environment.SpecialFolder.LocalApplicationData:
+                    folderPath = System.IO.Path.Combine(envHome, ".config");
+                    if (!System.IO.Directory.Exists(folderPath))
+                    {
+                        try
+                        {
+                            System.IO.Directory.CreateDirectory(folderPath);
+                        }
+                        catch (UnauthorizedAccessException)
+                        {
+                            // directory creation may fail if the account doesn't have filesystem permission such as some service accounts
+                            folderPath = String.Empty;
+                        }
+                    }
+                    break;
+                default:
+                    throw new NotSupportedException();
+            }
+#else
+            folderPath = System.Environment.GetFolderPath(folder);
+#endif
+            return folderPath ?? string.Empty;
+        }
 
         // Platform methods prefixed NonWindows are:
         // - non-windows by the definition of the IsWindows method above
@@ -441,6 +578,21 @@ namespace System.Management.Automation
             return Unix.NativeMethods.IsDirectory(path);
         }
 
+        internal static bool NonWindowsIsSameFileSystemItem(string pathOne, string pathTwo)
+        {
+            return Unix.NativeMethods.IsSameFileSystemItem(pathOne, pathTwo);
+        }
+
+        internal static bool NonWindowsGetInodeData(string path, out System.ValueTuple<UInt64, UInt64> inodeData)
+        {
+            UInt64 device = 0UL;
+            UInt64 inode = 0UL;
+            var result = Unix.NativeMethods.GetInodeData(path, out device, out inode);
+
+            inodeData = (device, inode);
+            return result == 0;
+        }
+
         internal static bool NonWindowsIsExecutable(string path)
         {
             return Unix.NativeMethods.IsExecutable(path);
@@ -449,6 +601,11 @@ namespace System.Management.Automation
         internal static uint NonWindowsGetThreadId()
         {
             return Unix.NativeMethods.GetCurrentThreadId();
+        }
+
+        internal static int NonWindowsGetProcessParentPid(int pid)
+        {
+            return IsOSX ? Unix.NativeMethods.GetPPid(pid) : Unix.GetProcFSParentPid(pid);
         }
 
         // Unix specific implementations of required functionality
@@ -525,6 +682,30 @@ namespace System.Management.Automation
                 }
             }
 
+            public static int GetProcFSParentPid(int pid)
+            {
+                const int invalidPid = -1;
+                // read /proc/<pid>/stat
+                // 4th column will contain the ppid, 92 in the example below
+                // ex: 93 (bash) S 92 93 2 4294967295 ...
+
+                var path = $"/proc/{pid}/stat";
+                try
+                {
+                    var stat = System.IO.File.ReadAllText(path);
+                    var parts = stat.Split(new[] { ' ' }, 5);
+                    if (parts.Length < 5)
+                    {
+                        return invalidPid;
+                    }
+                    return Int32.Parse(parts[3]);
+                }
+                catch (Exception)
+                {
+                    return invalidPid;
+                }
+            }
+
             internal static class NativeMethods
             {
                 private const string psLib = "libpsl-native";
@@ -539,6 +720,9 @@ namespace System.Management.Automation
                 [DllImport(psLib, CharSet = CharSet.Ansi, SetLastError = true)]
                 [return: MarshalAs(UnmanagedType.LPStr)]
                 internal static extern string GetUserName();
+
+                [DllImport(psLib)]
+                internal static extern int GetPPid(int pid);
 
                 [DllImport(psLib, CharSet = CharSet.Ansi, SetLastError = true)]
                 internal static extern int GetLinkCount([MarshalAs(UnmanagedType.LPStr)]string filePath, out int linkCount);
@@ -614,6 +798,15 @@ namespace System.Management.Automation
                 [DllImport(psLib, CharSet = CharSet.Ansi, SetLastError = true)]
                 [return: MarshalAs(UnmanagedType.I1)]
                 internal static extern bool IsDirectory([MarshalAs(UnmanagedType.LPStr)]string filePath);
+
+                [DllImport(psLib, CharSet = CharSet.Ansi, SetLastError = true)]
+                [return: MarshalAs(UnmanagedType.I1)]
+                internal static extern bool IsSameFileSystemItem([MarshalAs(UnmanagedType.LPStr)]string filePathOne,
+                                                                 [MarshalAs(UnmanagedType.LPStr)]string filePathTwo);
+
+                [DllImport(psLib, CharSet = CharSet.Ansi, SetLastError = true)]
+                internal static extern int GetInodeData([MarshalAs(UnmanagedType.LPStr)]string path,
+                                                        out UInt64 device, out UInt64 inode);
             }
         }
     }

@@ -80,14 +80,13 @@ namespace Microsoft.WSMan.Management
         //string for operation
         internal string WSManOp = null;
 
-        private ResourceManager _resourceMgr = null;
         private PSCmdlet cmdletname;
         private NavigationCmdletProvider _provider;
 
         private FileStream _fs;
         private StreamReader _sr;
 
-        private static ResourceManager g_resourceMgr = new ResourceManager("Microsoft.WSMan.Management.resources.WsManResources", typeof(WSManHelper).GetTypeInfo().Assembly);
+        private static ResourceManager _resourceMgr = new ResourceManager("Microsoft.WSMan.Management.resources.WsManResources", typeof(WSManHelper).GetTypeInfo().Assembly);
 
 
         //
@@ -99,7 +98,7 @@ namespace Microsoft.WSMan.Management
             /// dictionary object to store the connection
             /// </summary>
             internal static Dictionary<string, object> SessionObjCache = new Dictionary<string, object>();
-            
+
             ~Sessions()
             {
                 ReleaseSessions();
@@ -109,7 +108,7 @@ namespace Microsoft.WSMan.Management
         //
         //
         //
-        
+
 
         internal static void ReleaseSessions()
         {
@@ -153,26 +152,26 @@ namespace Microsoft.WSMan.Management
             System.Security.Principal.WindowsPrincipal principal = new System.Security.Principal.WindowsPrincipal(currentIdentity);
             if (!principal.IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator))
             {
-                string message = g_resourceMgr.GetString("ErrorElevationNeeded");
+                string message = _resourceMgr.GetString("ErrorElevationNeeded");
                 throw new InvalidOperationException(message);
             }
         }
-        
+
         internal string GetResourceMsgFromResourcetext(string rscname)
         {
-            return g_resourceMgr.GetString(rscname);
+            return _resourceMgr.GetString(rscname);
         }
 
         static internal string FormatResourceMsgFromResourcetextS(string rscname,
             params object[] args)
         {
-            return FormatResourceMsgFromResourcetextS(g_resourceMgr, rscname, args);
+            return FormatResourceMsgFromResourcetextS(_resourceMgr, rscname, args);
         }
 
         internal string FormatResourceMsgFromResourcetext(string resourceName,
             params object[] args)
         {
-            return FormatResourceMsgFromResourcetextS(this._resourceMgr, resourceName, args);
+            return FormatResourceMsgFromResourcetextS(_resourceMgr, resourceName, args);
         }
 
         static private string FormatResourceMsgFromResourcetextS(
@@ -472,7 +471,7 @@ namespace Microsoft.WSMan.Management
                                 }
                                 if (string.IsNullOrEmpty(entry.Key.ToString()))
                                 {
-                                    //XmlNode newnode = xmlfile.CreateNode(XmlNodeType.Attribute, ATTR_NIL_NAME, NS_XSI_URI);    
+                                    //XmlNode newnode = xmlfile.CreateNode(XmlNodeType.Attribute, ATTR_NIL_NAME, NS_XSI_URI);
                                     XmlAttribute newnode = xmlfile.CreateAttribute(XmlNodeType.Attribute.ToString(), ATTR_NIL_NAME, NS_XSI_URI);
                                     newnode.Value = "true";
                                     node.Attributes.Append(newnode);
@@ -528,7 +527,7 @@ namespace Microsoft.WSMan.Management
 
         internal string CreateConnectionString(Uri ConnUri, int port, string computername, string applicationname)
         {
-            string ConnectionString = null; 
+            string ConnectionString = null;
             if (ConnUri != null)
             {
                 ConnectionString = ConnUri.OriginalString;
@@ -551,7 +550,7 @@ namespace Microsoft.WSMan.Management
                 if (applicationname != null)
                 {
                     ConnectionString = ConnectionString + "/" + applicationname;
-                } 
+                }
             }
             return ConnectionString;
 
@@ -620,7 +619,7 @@ namespace Microsoft.WSMan.Management
         /// User has the following options:
         /// 1. AuthMechanism + Credential
         /// 2. CertificateThumbPrint
-        /// 
+        ///
         /// All the above are mutually exclusive.
         /// </summary>
         /// <exception cref="InvalidOperationException">
@@ -637,8 +636,8 @@ namespace Microsoft.WSMan.Management
                 throw new InvalidOperationException(message);
             }
 
-            if ((authentication != AuthenticationMechanism.Default) && 
-                (authentication != AuthenticationMechanism.ClientCertificate) && 
+            if ((authentication != AuthenticationMechanism.Default) &&
+                (authentication != AuthenticationMechanism.ClientCertificate) &&
                 (certificateThumbprint != null))
             {
                 String message = FormatResourceMsgFromResourcetextS(
@@ -906,7 +905,7 @@ namespace Microsoft.WSMan.Management
                 }
             }
         }
-	
+
         internal string GetURIWithFilter(string uri, string filter, Hashtable selectorset, string operation)
         {
             StringBuilder sburi = new StringBuilder();
@@ -1017,9 +1016,9 @@ namespace Microsoft.WSMan.Management
 
                 if (rGPOLocalMachineKey != null)
                 {
-                    rGPOLocalMachineKey = rGPOLocalMachineKey.OpenSubKey(Key_Allow_Fresh_Credentials, 
+                    rGPOLocalMachineKey = rGPOLocalMachineKey.OpenSubKey(Key_Allow_Fresh_Credentials,
 #if !CORECLR
-                        RegistryKeyPermissionCheck.ReadWriteSubTree, 
+                        RegistryKeyPermissionCheck.ReadWriteSubTree,
 #endif
                         System.Security.AccessControl.RegistryRights.FullControl);
                     if (rGPOLocalMachineKey == null)
@@ -1104,13 +1103,13 @@ namespace Microsoft.WSMan.Management
                     }
                 }
             }
-     
+
             catch (IOException e)
             {
-                
+
                 throw (e);
             }
-         
+
 
         }
 
@@ -1136,10 +1135,10 @@ namespace Microsoft.WSMan.Management
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         private static Dictionary<string, string> ResourceValueCache = new Dictionary<string, string>();
 
-        
+
     }
 }

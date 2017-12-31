@@ -6,11 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Management.Automation.Host;
 using System.Management.Automation.Internal.Host;
-
-#if !CORECLR
-using BinaryFormatter = System.Runtime.Serialization.Formatters.Binary.BinaryFormatter;
-#endif
-
+using System.Runtime.Serialization.Formatters.Binary;
 using Dbg = System.Management.Automation.Diagnostics;
 
 namespace System.Management.Automation.Remoting
@@ -28,10 +24,6 @@ namespace System.Management.Automation.Remoting
         internal Version PSVersion { get; }
         internal Version SerializationVersion { get; }
         internal RemotingDestination RemotingDestination { get; }
-
-#if !CORECLR // TimeZone Not In CoreCLR
-#endif
-
         private static byte[] s_timeZoneInByteFormat;
 
         /// <summary>
@@ -62,12 +54,6 @@ namespace System.Management.Automation.Remoting
         }
 
         /// <summary>
-        /// Added to enable ClrFacade.GetUninitializedObject to instantiate an uninitialized version of this class.
-        /// </summary>
-        internal RemoteSessionCapability()
-        { }
-
-        /// <summary>
         /// Create client capability.
         /// </summary>
         internal static RemoteSessionCapability CreateClientCapability()
@@ -85,23 +71,20 @@ namespace System.Management.Automation.Remoting
 
         /// <summary>
         /// This is static property which gets Current TimeZone in byte format
-        /// by using ByteFormatter. 
+        /// by using ByteFormatter.
         /// This is static to make client generate this only once.
         /// </summary>
         internal static byte[] GetCurrentTimeZoneInByteFormat()
         {
             if (null == s_timeZoneInByteFormat)
             {
-#if CORECLR //TODO:CORECLR 'BinaryFormatter' is not in CORE CLR. Since this is TimeZone related and TimeZone is not available on CORE CLR so wait until we solve TimeZone issue.
-                s_timeZoneInByteFormat = Utils.EmptyArray<byte>();
-#else
                 Exception e = null;
                 try
                 {
                     BinaryFormatter formatter = new BinaryFormatter();
                     using (MemoryStream stream = new MemoryStream())
                     {
-                        formatter.Serialize(stream, TimeZone.CurrentTimeZone);
+                        formatter.Serialize(stream, TimeZoneInfo.Local);
                         stream.Seek(0, SeekOrigin.Begin);
                         byte[] result = new byte[stream.Length];
                         stream.Read(result, 0, (int)stream.Length);
@@ -127,19 +110,15 @@ namespace System.Management.Automation.Remoting
                 {
                     s_timeZoneInByteFormat = Utils.EmptyArray<byte>();
                 }
-#endif
             }
 
             return s_timeZoneInByteFormat;
         }
 
-#if !CORECLR // TimeZone Not In CoreCLR
         /// <summary>
         /// Gets the TimeZone of the destination machine. This may be null
         /// </summary>
-        internal TimeZone TimeZone { get; set; }
-#endif
-
+        internal TimeZoneInfo TimeZone { get; set; }
     }
 
     /// <summary>
@@ -234,9 +213,8 @@ namespace System.Management.Automation.Remoting
             {
                 hostDefaultData.SetValue(HostDefaultDataId.ForegroundColor, hostRawUI.ForegroundColor);
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                CommandProcessorBase.CheckForSevereException(e);
             }
 
             // Set BackgroundColor.
@@ -244,9 +222,8 @@ namespace System.Management.Automation.Remoting
             {
                 hostDefaultData.SetValue(HostDefaultDataId.BackgroundColor, hostRawUI.BackgroundColor);
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                CommandProcessorBase.CheckForSevereException(e);
             }
 
             // Set CursorPosition.
@@ -254,9 +231,8 @@ namespace System.Management.Automation.Remoting
             {
                 hostDefaultData.SetValue(HostDefaultDataId.CursorPosition, hostRawUI.CursorPosition);
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                CommandProcessorBase.CheckForSevereException(e);
             }
 
             // Set WindowPosition.
@@ -264,9 +240,8 @@ namespace System.Management.Automation.Remoting
             {
                 hostDefaultData.SetValue(HostDefaultDataId.WindowPosition, hostRawUI.WindowPosition);
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                CommandProcessorBase.CheckForSevereException(e);
             }
 
             // Set CursorSize.
@@ -274,9 +249,8 @@ namespace System.Management.Automation.Remoting
             {
                 hostDefaultData.SetValue(HostDefaultDataId.CursorSize, hostRawUI.CursorSize);
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                CommandProcessorBase.CheckForSevereException(e);
             }
 
             // Set BufferSize.
@@ -284,9 +258,8 @@ namespace System.Management.Automation.Remoting
             {
                 hostDefaultData.SetValue(HostDefaultDataId.BufferSize, hostRawUI.BufferSize);
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                CommandProcessorBase.CheckForSevereException(e);
             }
 
             // Set WindowSize.
@@ -294,9 +267,8 @@ namespace System.Management.Automation.Remoting
             {
                 hostDefaultData.SetValue(HostDefaultDataId.WindowSize, hostRawUI.WindowSize);
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                CommandProcessorBase.CheckForSevereException(e);
             }
 
             // Set MaxWindowSize.
@@ -304,9 +276,8 @@ namespace System.Management.Automation.Remoting
             {
                 hostDefaultData.SetValue(HostDefaultDataId.MaxWindowSize, hostRawUI.MaxWindowSize);
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                CommandProcessorBase.CheckForSevereException(e);
             }
 
             // Set MaxPhysicalWindowSize.
@@ -314,9 +285,8 @@ namespace System.Management.Automation.Remoting
             {
                 hostDefaultData.SetValue(HostDefaultDataId.MaxPhysicalWindowSize, hostRawUI.MaxPhysicalWindowSize);
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                CommandProcessorBase.CheckForSevereException(e);
             }
 
             // Set WindowTitle.
@@ -324,9 +294,8 @@ namespace System.Management.Automation.Remoting
             {
                 hostDefaultData.SetValue(HostDefaultDataId.WindowTitle, hostRawUI.WindowTitle);
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                CommandProcessorBase.CheckForSevereException(e);
             }
 
             return hostDefaultData;
@@ -415,12 +384,6 @@ namespace System.Management.Automation.Remoting
                 _hostDefaultData = HostDefaultData.Create(host.UI.RawUI);
             }
         }
-
-        /// <summary>
-        /// Added to enable ClrFacade.GetUninitializedObject to instantiate an uninitialized version of this class.
-        /// </summary>
-        internal HostInfo()
-        { }
 
         /// <summary>
         /// Check host chain.

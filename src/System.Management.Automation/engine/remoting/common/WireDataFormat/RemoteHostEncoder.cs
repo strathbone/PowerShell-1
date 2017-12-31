@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Management.Automation.Host;
 using System.Globalization;
 using System.Security;
+using System.Runtime.Serialization;
 using Dbg = System.Management.Automation.Diagnostics;
 
 namespace System.Management.Automation.Remoting
@@ -86,7 +87,7 @@ namespace System.Management.Automation.Remoting
         /// </summary>
         private static object DecodeClassOrStruct(PSObject psObject, Type type)
         {
-            object obj = ClrFacade.GetUninitializedObject(type);
+            object obj = FormatterServices.GetUninitializedObject(type);
 
             // Field values cannot be null - because for null fields we simply don't transport them.
             foreach (PSPropertyInfo propertyInfo in psObject.Properties)
@@ -484,7 +485,7 @@ namespace System.Management.Automation.Remoting
             else if (obj is PSObject && IsGenericIEnumerableOfInt(type))
             {
                 // we cannot create an instance of interface type like IEnumerable
-                // Since a Collection implements IEnumerable, falling back to use 
+                // Since a Collection implements IEnumerable, falling back to use
                 // that.
                 return DecodeCollection((PSObject)obj, typeof(Collection<int>));
             }

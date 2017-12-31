@@ -18,6 +18,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Security.Cryptography;
+using System.Security.Permissions;
 using System.Text;
 using System.Threading;
 using Microsoft.Win32;
@@ -32,8 +33,6 @@ using Microsoft.PowerShell.CoreClr.Stubs;
 #else
 //TODO:CORECLR System.DirectoryServices is not available on CORE CLR
 using System.DirectoryServices;
-//TODO:CORECLR System.Security.Permission is not available on CORE CLR
-using System.Security.Permissions;
 using System.Management; // We are not porting the library to CoreCLR
 using Microsoft.WSMan.Management;
 #endif
@@ -47,9 +46,9 @@ namespace Microsoft.PowerShell.Commands
 #region Test-Connection
 
     /// <summary>
-    /// This cmdlet is used to test whether a particular host is reachable across an 
-    /// IP network. It works by sending ICMP "echo request" packets to the target 
-    /// host and listening for ICMP "echo response" replies. This cmdlet prints a 
+    /// This cmdlet is used to test whether a particular host is reachable across an
+    /// IP network. It works by sending ICMP "echo request" packets to the target
+    /// host and listening for ICMP "echo response" replies. This cmdlet prints a
     /// statistical summary when finished.
     /// </summary>
     [Cmdlet(VerbsDiagnostic.Test, "Connection", DefaultParameterSetName = RegularParameterSet,
@@ -65,7 +64,7 @@ namespace Microsoft.PowerShell.Commands
         private const string SourceParameterSet = "Source";
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         [Parameter(ParameterSetName = SourceParameterSet)]
         [Parameter(ParameterSetName = RegularParameterSet)]
@@ -73,9 +72,9 @@ namespace Microsoft.PowerShell.Commands
 
         /// <summary>
         /// The following is the definition of the input parameter "DcomAuthentication".
-        /// Specifies the authentication level to be used with WMI connection. Valid 
+        /// Specifies the authentication level to be used with WMI connection. Valid
         /// values are:
-        /// 
+        ///
         /// Unchanged = -1,
         /// Default = 0,
         /// None = 1,
@@ -128,9 +127,17 @@ namespace Microsoft.PowerShell.Commands
         public Int32 BufferSize { get; set; } = 32;
 
         /// <summary>
+        /// The following is the definition of the input parameter "TimeOut".
+        /// Time-out value in milliseconds. If a response is not received in this time, no response is assumed. The default is 1000 milliseconds.
+        /// </summary>
+        [Parameter]
+        [ValidateRange((int)1, Int32.MaxValue)]
+        public Int32 TimeOut { get; set; } = 1000;
+
+        /// <summary>
         /// The following is the definition of the input parameter "ComputerName".
-        /// Value of the address requested. The form of the value can be either the 
-        /// computer name ("wxyz1234"), IPv4 address ("192.168.177.124"), or IPv6 
+        /// Value of the address requested. The form of the value can be either the
+        /// computer name ("wxyz1234"), IPv4 address ("192.168.177.124"), or IPv6
         /// address ("2010:836B:4179::836B:4179").
         /// </summary>
         [Parameter(Mandatory = true,
@@ -151,8 +158,8 @@ namespace Microsoft.PowerShell.Commands
 
         /// <summary>
         /// The following is the definition of the input parameter "Credential".
-        /// Specifies a user account that has permission to perform this action. Type a 
-        /// user-name, such as "User01" or "Domain01\User01", or enter a PSCredential 
+        /// Specifies a user account that has permission to perform this action. Type a
+        /// user-name, such as "User01" or "Domain01\User01", or enter a PSCredential
         /// object, such as one from the Get-Credential cmdlet
         /// </summary>
         [Parameter(ParameterSetName = SourceParameterSet, Mandatory = false)]
@@ -172,9 +179,9 @@ namespace Microsoft.PowerShell.Commands
 
         /// <summary>
         /// The following is the definition of the input parameter "Impersonation".
-        /// Specifies the impersonation level to use when calling the WMI method. Valid 
-        /// values are: 
-        /// 
+        /// Specifies the impersonation level to use when calling the WMI method. Valid
+        /// values are:
+        ///
         /// Default = 0,
         /// Anonymous = 1,
         /// Identify = 2,
@@ -186,7 +193,7 @@ namespace Microsoft.PowerShell.Commands
 
         /// <summary>
         /// The following is the definition of the input parameter "ThrottleLimit".
-        /// The number of concurrent computers on which the command will be allowed to 
+        /// The number of concurrent computers on which the command will be allowed to
         /// execute
         /// </summary>
         [Parameter(ParameterSetName = SourceParameterSet)]
@@ -206,9 +213,9 @@ namespace Microsoft.PowerShell.Commands
 
         /// <summary>
         /// The following is the definition of the input parameter "TimeToLive".
-        /// Life span of the packet in seconds. The value is treated as an upper limit. 
-        /// All routers must decrement this value by 1 (one). When this value becomes 0 
-        /// (zero), the packet is dropped by the router. The default value is 80 
+        /// Life span of the packet in seconds. The value is treated as an upper limit.
+        /// All routers must decrement this value by 1 (one). When this value becomes 0
+        /// (zero), the packet is dropped by the router. The default value is 80
         /// seconds. The hops between routers rarely take this amount of time.
         /// </summary>
         [Parameter]
@@ -340,7 +347,7 @@ namespace Microsoft.PowerShell.Commands
         }
         /// <summary>
         /// to implement ^C
-        /// </summary> 
+        /// </summary>
         protected override void StopProcessing()
         {
 #if !CORECLR
@@ -399,6 +406,9 @@ namespace Microsoft.PowerShell.Commands
             FilterString.Append(" And ");
             FilterString.Append("BufferSize=");
             FilterString.Append(BufferSize);
+            FilterString.Append(" And ");
+            FilterString.Append("TimeOut=");
+            FilterString.Append(TimeOut);
             FilterString.Append(")");
             return FilterString.ToString();
         }
@@ -612,6 +622,7 @@ namespace Microsoft.PowerShell.Commands
 
                         using (CimSession cimSession = RemoteDiscoveryHelper.CreateCimSession(sourceComp, this.Credential, WsmanAuthentication, cancel.Token, this))
                         {
+                            WriteVerbose(String.Format("WMI query {0} sent to {1}", querystring, sourceComp));
                             for (int echoRequestCount = 0; echoRequestCount < Count; echoRequestCount++)
                             {
                                 IEnumerable<CimInstance> mCollection = cimSession.QueryInstances(
@@ -674,7 +685,7 @@ namespace Microsoft.PowerShell.Commands
 #region Parameters
         /// <summary>
         /// Specifies the Drive on which the system restore will be enabled.
-        /// The drive string should be of the form "C:\". 
+        /// The drive string should be of the form "C:\".
         /// </summary>
         [Parameter(Position = 0, Mandatory = true)]
         [ValidateNotNullOrEmpty]
@@ -766,7 +777,7 @@ namespace Microsoft.PowerShell.Commands
                                 continue;
                             }
                             //parameter for Enable method
-                            //if the input drive is not system drive 
+                            //if the input drive is not system drive
                             if (!driveNew.Equals(sysdrive, StringComparison.OrdinalIgnoreCase))
                             {
                                 object[] inputDrive = { driveNew };
@@ -778,7 +789,7 @@ namespace Microsoft.PowerShell.Commands
                                     retValue = Convert.ToInt32(WMIClass.InvokeMethod("Enable", inputDrive), System.Globalization.CultureInfo.CurrentCulture);
                                 }
                             }
-                            //if not success and if it is not already enabled (error code is 1056 in XP) 
+                            //if not success and if it is not already enabled (error code is 1056 in XP)
                             // Error 1717 - The interface is unknown. Even though this comes sometimes . The Drive is getting enabled.
                             if (!(retValue.Equals(0)) && !(retValue.Equals(ComputerWMIHelper.ErrorCode_Service)) && !(retValue.Equals(ComputerWMIHelper.ErrorCode_Interface)))
                             {
@@ -854,7 +865,7 @@ namespace Microsoft.PowerShell.Commands
 #region Parameters
         /// <summary>
         /// Specifies the Drive on which the system restore will be enabled.
-        /// The drive string should be of the form "C:\". 
+        /// The drive string should be of the form "C:\".
         /// </summary>
         [Parameter(Position = 0, Mandatory = true)]
         [ValidateNotNullOrEmpty]
@@ -996,7 +1007,7 @@ namespace Microsoft.PowerShell.Commands
 #region Checkpoint-Computer
 
     /// <summary>
-    /// Creates the Restore Point for the Local computer 
+    /// Creates the Restore Point for the Local computer
     /// </summary>
 
     [Cmdlet(VerbsData.Checkpoint, "Computer", HelpUri = "https://go.microsoft.com/fwlink/?LinkID=135197")]
@@ -1005,7 +1016,7 @@ namespace Microsoft.PowerShell.Commands
 #region Parameters
 
         /// <summary>
-        /// The description to be displayed so the user can easily identify a restore point. 
+        /// The description to be displayed so the user can easily identify a restore point.
         /// </summary>
         [Parameter(Position = 0, Mandatory = true)]
         [ValidateNotNullOrEmpty]
@@ -1013,7 +1024,7 @@ namespace Microsoft.PowerShell.Commands
 
 
         /// <summary>
-        /// The type of restore point. 
+        /// The type of restore point.
         /// </summary>
         [Parameter(Position = 1)]
         [Alias("RPT")]
@@ -1081,7 +1092,7 @@ namespace Microsoft.PowerShell.Commands
 
             string activityDescription = StringUtil.Format(ComputerResources.ProgressActivity);
             ProgressRecord progressRecord = new ProgressRecord(
-                1905347723, // unique id 
+                1905347723, // unique id
                 activityDescription,
                 statusDescription);
 
@@ -1456,7 +1467,7 @@ namespace Microsoft.PowerShell.Commands
 #region overrides
         /// <summary>
         /// Gets the list of Computer Restore point.
-        /// ID parameter id used to refer the sequence no. When given searched with particular 
+        /// ID parameter id used to refer the sequence no. When given searched with particular
         /// sequence no. and returns the restore point
         /// </summary>
         protected override void BeginProcessing()
@@ -1644,7 +1655,7 @@ namespace Microsoft.PowerShell.Commands
         /// The message used in the exception.
         /// </param>
         ///
-        /// <param name="innerException"> 
+        /// <param name="innerException">
         /// An exception that led to this exception.
         /// </param>
         public RestartComputerTimeoutException(string message, Exception innerException) : base(message, innerException) { }
@@ -1653,13 +1664,13 @@ namespace Microsoft.PowerShell.Commands
         /// <summary>
         /// Serialization constructor for class RestartComputerTimeoutException
         /// </summary>
-        /// 
-        /// <param name="info"> 
-        /// serialization information 
+        ///
+        /// <param name="info">
+        /// serialization information
         /// </param>
-        /// 
-        /// <param name="context"> 
-        /// streaming context 
+        ///
+        /// <param name="context">
+        /// streaming context
         /// </param>
         private RestartComputerTimeoutException(SerializationInfo info, StreamingContext context)
             : base(info, context)
@@ -1676,13 +1687,13 @@ namespace Microsoft.PowerShell.Commands
         /// <summary>
         /// Serializes the RestartComputerTimeoutException.
         /// </summary>
-        /// 
-        /// <param name="info"> 
-        /// serialization information 
+        ///
+        /// <param name="info">
+        /// serialization information
         /// </param>
-        /// 
-        /// <param name="context"> 
-        /// streaming context 
+        ///
+        /// <param name="context">
+        /// streaming context
         /// </param>
         [SecurityPermission(SecurityAction.Demand, SerializationFormatter = true)]
         public override void GetObjectData(SerializationInfo info, StreamingContext context)
@@ -1722,7 +1733,7 @@ namespace Microsoft.PowerShell.Commands
     }
 
     /// <summary>
-    /// Restarts  the computer 
+    /// Restarts  the computer
     /// </summary>
     [Cmdlet(VerbsLifecycle.Restart, "Computer", SupportsShouldProcess = true, DefaultParameterSetName = DefaultParameterSet,
         HelpUri = "https://go.microsoft.com/fwlink/?LinkID=135253", RemotingCapability = RemotingCapability.OwnedByCommand)]
@@ -1734,17 +1745,17 @@ namespace Microsoft.PowerShell.Commands
         private const string AsJobParameterSet = "AsJobSet";
 
         /// <summary>
-        /// Used to start a command remotely as a Job. The Job results are collected 
-        /// and stored in the global cache on the client machine. 
+        /// Used to start a command remotely as a Job. The Job results are collected
+        /// and stored in the global cache on the client machine.
         /// </summary>
         [Parameter(ParameterSetName = AsJobParameterSet)]
         public SwitchParameter AsJob { get; set; } = false;
 
         /// <summary>
         /// The following is the definition of the input parameter "Authentication".
-        /// Specifies the authentication level to be used with WMI connection. Valid 
+        /// Specifies the authentication level to be used with WMI connection. Valid
         /// values are:
-        /// 
+        ///
         /// Unchanged = -1,
         /// Default = 0,
         /// None = 1,
@@ -1771,9 +1782,9 @@ namespace Microsoft.PowerShell.Commands
 
         /// <summary>
         /// The following is the definition of the input parameter "Impersonation".
-        /// Specifies the impersonation level to use when calling the WMI method. Valid 
-        /// values are: 
-        /// 
+        /// Specifies the impersonation level to use when calling the WMI method. Valid
+        /// values are:
+        ///
         /// Default = 0,
         /// Anonymous = 1,
         /// Identify = 2,
@@ -1832,10 +1843,10 @@ namespace Microsoft.PowerShell.Commands
         private bool _isProtocolSpecified = false;
 
         /// <summary>
-        /// Specifies the computer (s)Name on which this command is executed. 
+        /// Specifies the computer (s)Name on which this command is executed.
         /// When this parameter is omitted, this cmdlet restarts the local computer.
-        /// Type the NETBIOS name, IP address, or fully-qualified domain name of one 
-        /// or more computers in a comma-separated list. To specify the local computer, type the computername or "localhost". 
+        /// Type the NETBIOS name, IP address, or fully-qualified domain name of one
+        /// or more computers in a comma-separated list. To specify the local computer, type the computername or "localhost".
         /// </summary>
         [Parameter(Position = 0, ValueFromPipeline = true,
                    ValueFromPipelineByPropertyName = true)]
@@ -1850,8 +1861,8 @@ namespace Microsoft.PowerShell.Commands
 
         /// <summary>
         /// The following is the definition of the input parameter "Credential".
-        /// Specifies a user account that has permission to perform this action. Type a 
-        /// user-name, such as "User01" or "Domain01\User01", or enter a PSCredential 
+        /// Specifies a user account that has permission to perform this action. Type a
+        /// user-name, such as "User01" or "Domain01\User01", or enter a PSCredential
         /// object, such as one from the Get-Credential cmdlet
         /// </summary>
         [Parameter(Position = 1)]
@@ -1860,8 +1871,8 @@ namespace Microsoft.PowerShell.Commands
         public PSCredential Credential { get; set; }
 
         /// <summary>
-        /// Using Force in conjunction with Reboot on a 
-        /// remote computer immediately reboots the remote computer.  
+        /// Using Force in conjunction with Reboot on a
+        /// remote computer immediately reboots the remote computer.
         /// </summary>
         [Parameter]
         [Alias("f")]
@@ -1893,7 +1904,7 @@ namespace Microsoft.PowerShell.Commands
         public SwitchParameter Wait { get; set; }
 
         /// <summary>
-        /// Specify the Timeout parameter. 
+        /// Specify the Timeout parameter.
         /// Negative value indicates wait infinitely.
         /// Positive value indicates the seconds to wait before timeout.
         /// </summary>
@@ -1956,7 +1967,7 @@ $result = @{}
 foreach ($computerName in $array[1])
 {
     $ret = $null
-    if ($array[0] -eq $null)
+    if ($null -eq array[0])
     {
         $ret = Invoke-Command -ComputerName $computerName {$true} -SessionOption (New-PSSessionOption -NoMachineProfile) -ErrorAction SilentlyContinue
     }
@@ -2296,9 +2307,8 @@ $result
                 {
                     restartStageTestList.Add(computer);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    CommandProcessorBase.CheckForSevereException(ex);
                     restartStageTestList.Add(computer);
                 }
             }
@@ -2431,7 +2441,6 @@ $result
                 }
                 catch (Exception ex)
                 {
-                    CommandProcessorBase.CheckForSevereException(ex);
                     string errMsg = StringUtil.Format(ComputerResources.RestartComputerSkipped, computer, ex.Message);
                     var error = new ErrorRecord(new InvalidOperationException(errMsg), "RestartComputerSkipped",
                                                         ErrorCategory.OperationStopped, computer);
@@ -2504,9 +2513,8 @@ $result
                 {
                     wmiTestList.Add(computer);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    CommandProcessorBase.CheckForSevereException(ex);
                     wmiTestList.Add(computer);
                 }
             }
@@ -2544,9 +2552,8 @@ $result
                 {
                     winrmTestList.Add(computerName);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    CommandProcessorBase.CheckForSevereException(ex);
                     winrmTestList.Add(computerName);
                 }
             }
@@ -2574,7 +2581,7 @@ $result
                     Dbg.Diagnostics.Assert(false, "This should never happen. Invoke should never return null.");
                 }
 
-                // If ^C or timeout happens when we are in powershell.Invoke(), the psObjectCollection might be empty 
+                // If ^C or timeout happens when we are in powershell.Invoke(), the psObjectCollection might be empty
                 if (psObjectCollection.Count == 0)
                 {
                     return computerNames;
@@ -2762,7 +2769,7 @@ $result
 
             // DCOM Authentication is not supported for CoreCLR. Throw an error
             // and request that the user specify WSMan Authentication.
-            if (_isDcomAuthenticationSpecified || 
+            if (_isDcomAuthenticationSpecified ||
                 Protocol.Equals(ComputerWMIHelper.DcomProtocol, StringComparison.OrdinalIgnoreCase))
             {
                 InvalidOperationException ex = new InvalidOperationException(ComputerResources.InvalidParameterDCOMNotSupported);
@@ -2854,7 +2861,7 @@ $result
             }
             else if (ParameterSetName.Equals(DefaultParameterSet, StringComparison.OrdinalIgnoreCase))
             {
-                // CoreCLR does not support DCOM, so there is no point checking 
+                // CoreCLR does not support DCOM, so there is no point checking
                 // it here. It was already validated in BeginProcessing().
 
                 bool dcomInUse = Protocol.Equals(ComputerWMIHelper.DcomProtocol, StringComparison.OrdinalIgnoreCase);
@@ -3022,7 +3029,7 @@ $result
                                 }
                                 else
 #endif
-                                // This statement block executes for both CLRs. 
+                                // This statement block executes for both CLRs.
                                 // In the "full" CLR, it serves as the else case.
                                 {
                                     if (_waitOnComputers.Count == 1)
@@ -3053,7 +3060,7 @@ $result
                                 }
                                 else
 #endif
-                                // This statement block executes for both CLRs. 
+                                // This statement block executes for both CLRs.
                                 // In the "full" CLR, it serves as the else case.
                                 {
                                     // CIM-WSMan in use. In this case, restart stage checking is done by using WMIv2,
@@ -3211,9 +3218,9 @@ $result
 
         /// <summary>
         /// The following is the definition of the input parameter "DcomAuthentication".
-        /// Specifies the authentication level to be used with WMI connection. Valid 
+        /// Specifies the authentication level to be used with WMI connection. Valid
         /// values are:
-        /// 
+        ///
         /// Unchanged = -1,
         /// Default = 0,
         /// None = 1,
@@ -3246,7 +3253,7 @@ $result
         /// </summary>
         [Parameter]
         [ValidateSet(ComputerWMIHelper.DcomProtocol, ComputerWMIHelper.WsmanProtocol)]
-        public string Protocol { get; set; } = 
+        public string Protocol { get; set; } =
 #if CORECLR
             //CoreClr does not support DCOM protocol
             // This change makes sure that the the command works seamlessly if user did not explicitly entered the protocol
@@ -3257,8 +3264,8 @@ $result
 
         /// <summary>
         /// The following is the definition of the input parameter "ComputerName".
-        /// Value of the address requested. The form of the value can be either the 
-        /// computer name ("wxyz1234"), IPv4 address ("192.168.177.124"), or IPv6 
+        /// Value of the address requested. The form of the value can be either the
+        /// computer name ("wxyz1234"), IPv4 address ("192.168.177.124"), or IPv6
         /// address ("2010:836B:4179::836B:4179").
         /// </summary>
         [Parameter(Position = 0, ValueFromPipelineByPropertyName = true)]
@@ -3270,8 +3277,8 @@ $result
 
         /// <summary>
         /// The following is the definition of the input parameter "Credential".
-        /// Specifies a user account that has permission to perform this action. Type a 
-        /// user-name, such as "User01" or "Domain01\User01", or enter a PSCredential 
+        /// Specifies a user account that has permission to perform this action. Type a
+        /// user-name, such as "User01" or "Domain01\User01", or enter a PSCredential
         /// object, such as one from the Get-Credential cmdlet
         /// </summary>
         [Parameter(Position = 1)]
@@ -3281,9 +3288,9 @@ $result
 
         /// <summary>
         /// The following is the definition of the input parameter "Impersonation".
-        /// Specifies the impersonation level to use when calling the WMI method. Valid 
-        /// values are: 
-        /// 
+        /// Specifies the impersonation level to use when calling the WMI method. Valid
+        /// values are:
+        ///
         /// Default = 0,
         /// Anonymous = 1,
         /// Identify = 2,
@@ -3295,7 +3302,7 @@ $result
 
         /// <summary>
         /// The following is the definition of the input parameter "ThrottleLimit".
-        /// The number of concurrent computers on which the command will be allowed to 
+        /// The number of concurrent computers on which the command will be allowed to
         /// execute
         /// </summary>
         [Parameter]
@@ -3314,7 +3321,7 @@ $result
 
         /// <summary>
         /// The following is the definition of the input parameter "ThrottleLimit".
-        /// The number of concurrent computers on which the command will be allowed to 
+        /// The number of concurrent computers on which the command will be allowed to
         /// execute
         /// </summary>
         [Parameter]
@@ -3618,7 +3625,7 @@ $result
 #region Parameters
         /// <summary>
         /// Restorepoint parameter
-        /// </summary>        
+        /// </summary>
 
         [Parameter(Position = 0, Mandatory = true)]
         [ValidateNotNull]
@@ -3662,7 +3669,7 @@ $result
 
 #region overrides
         /// <summary>
-        /// Restores the computer with 
+        /// Restores the computer with
         /// </summary>
         protected override void BeginProcessing()
         {
@@ -3800,7 +3807,7 @@ $result
         PasswordPass = 0x80,
 
         /// <summary>
-        /// Writing SPN and DNSHostName attributes on the computer object should be deferred until the rename operation that 
+        /// Writing SPN and DNSHostName attributes on the computer object should be deferred until the rename operation that
         /// follows the join operation
         /// </summary>
         DeferSPNSet = 0x100,
@@ -3823,10 +3830,10 @@ $result
     }
 
     /// <summary>
-    /// Adds the specified computer(s) to the Domain or Work Group. If the account 
-    /// does not already exist on the domain, it also creates one (see notes for 
+    /// Adds the specified computer(s) to the Domain or Work Group. If the account
+    /// does not already exist on the domain, it also creates one (see notes for
     /// implementation details).
-    /// If the computer is already joined to a domain, it can be moved to a new 
+    /// If the computer is already joined to a domain, it can be moved to a new
     /// domain (see notes for implementation details).
     /// </summary>
     [SuppressMessage("Microsoft.PowerShell", "PS1004AcceptForceParameterWhenCallingShouldContinue")]
@@ -3969,14 +3976,14 @@ $result
         /// Unjoin the computer from its current domain
         /// <remarks>
         /// In the DomainParameterSet, the UnjoinDomainCredential is our first choice to unjoin a domain.
-        /// But if the UnjoinDomainCredential is not specified, the DomainCredential will be our second 
+        /// But if the UnjoinDomainCredential is not specified, the DomainCredential will be our second
         /// choice. This is to keep the backward compatibility. In Win7, we can do:
         ///      Add-Computer -DomainName domain1 -Credential $credForDomain1AndDomain2
         /// to switch the local machine that is currently in domain2 to domain1.
-        /// 
+        ///
         /// Since DomainCredential has an alias "Credential", the same command should still work for the
         /// new Add-Computer cmdlet.
-        /// 
+        ///
         /// In the WorkgroupParameterSet, the UnjoinDomainCredential is the only choice.
         /// </remarks>
         /// </summary>
@@ -4010,7 +4017,7 @@ $result
         /// </summary>
         /// <remarks>
         /// If a computer is already in a domain, we first unjoin it from its current domain, and
-        /// then do the join operation to the new domain. So when this method is invoked, we are 
+        /// then do the join operation to the new domain. So when this method is invoked, we are
         /// currently in a workgroup
         /// </remarks>
         /// <param name="computerSystem"></param>
@@ -4220,7 +4227,7 @@ $result
                 }
             }
 
-            // If LocalCred is given, use the local credential for WMI connection. Otherwise, use 
+            // If LocalCred is given, use the local credential for WMI connection. Otherwise, use
             // the current caller's context (Username = null, Password = null)
             if (LocalCredential != null)
             {
@@ -4249,7 +4256,7 @@ $result
                     {
                         using (computerSystem)
                         {
-                            // If we are not using the new computer name, check the length of the target machine name 
+                            // If we are not using the new computer name, check the length of the target machine name
                             string hostName = (string)computerSystem["DNSHostName"];
                             if (newName == null && hostName.Length > ComputerWMIHelper.NetBIOSNameMaxLength)
                             {
@@ -4520,9 +4527,8 @@ $result
                     {
                         Dns.GetHostEntry(Server);
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
-                        CommandsCommon.CheckForSevereException(this, ex);
                         WriteErrorHelper(ComputerResources.CannotResolveServerName, "AddressResolutionException",
                                          Server, ErrorCategory.InvalidArgument, true, Server);
                     }
@@ -4557,7 +4563,7 @@ $result
             int oldJoinDomainFlags = _joinDomainflags;
             if (NewName != null && ParameterSetName == DomainParameterSet)
             {
-                // We rename the computer after it's joined to the target domain, so writing SPN and DNSHostName attributes 
+                // We rename the computer after it's joined to the target domain, so writing SPN and DNSHostName attributes
                 // on the computer object should be deferred until the rename operation that follows the join operation
                 _joinDomainflags |= (int)JoinOptions.DeferSPNSet;
             }
@@ -4624,7 +4630,7 @@ $result
 #region RemoveComputer
 
     /// <summary>
-    /// Removes the Specified Computer(s) from the relevant Domain or Work Group 
+    /// Removes the Specified Computer(s) from the relevant Domain or Work Group
     /// </summary>
 
     [Cmdlet(VerbsCommon.Remove, "Computer", SupportsShouldProcess = true, DefaultParameterSetName = LocalParameterSet,
@@ -4681,7 +4687,7 @@ $result
         private bool _force;
 
         /// <summary>
-        /// Only emit if passthru is specified. One bool/string pair for each 
+        /// Only emit if passthru is specified. One bool/string pair for each
         /// computer that was joined. Bool = success/failure. String = ComputerName.
         /// </summary>
         [Parameter]
@@ -4964,8 +4970,8 @@ $result
 #region Rename-Computer
 
     /// <summary>
-    /// Renames a domain computer and its corresponding domain account or a 
-    /// workgroup computer. Use this command to rename domain workstations and local 
+    /// Renames a domain computer and its corresponding domain account or a
+    /// workgroup computer. Use this command to rename domain workstations and local
     /// machines only. It cannot be used to rename Domain Controllers.
     /// </summary>
 
@@ -5273,8 +5279,6 @@ $result
             }
             catch (Exception ex)
             {
-                CommandProcessorBase.CheckForSevereException(ex);
-
                 string errMsg = StringUtil.Format(ComputerResources.FailToConnectToComputer, computerName, ex.Message);
                 ErrorRecord error = new ErrorRecord(new InvalidOperationException(errMsg), "RenameComputerException",
                                                     ErrorCategory.OperationStopped, computerName);
@@ -5491,7 +5495,7 @@ $result
 
 
     /// <summary>
-    /// This cmdlet queries the status of trust relationships and will remove and 
+    /// This cmdlet queries the status of trust relationships and will remove and
     /// rebuild the trust if specified.
     /// </summary>
 
@@ -5620,8 +5624,6 @@ $result
                 }
                 catch (Exception exception)
                 {
-                    CommandProcessorBase.CheckForSevereException(exception);
-
                     string errMsg = StringUtil.Format(ComputerResources.CannotResolveComputerName, Server, exception.Message);
                     ErrorRecord error = new ErrorRecord(new InvalidOperationException(errMsg), "AddressResolutionException", ErrorCategory.InvalidArgument, Server);
                     ThrowTerminatingError(error);
@@ -5715,7 +5717,7 @@ $result
     /// Resets the computer machine password used to authenticate with DCs.
     /// </summary>
 
-    [Cmdlet("Reset", "ComputerMachinePassword",
+    [Cmdlet(VerbsCommon.Reset, "ComputerMachinePassword",
              SupportsShouldProcess = true, HelpUri = "https://go.microsoft.com/fwlink/?LinkID=135252")]
     public class ResetComputerMachinePasswordCommand : PSCmdlet
     {
@@ -5723,7 +5725,7 @@ $result
 
         /// <summary>
         /// The following is the definition of the input parameter "Server".
-        /// Specifies the name of the domain controller to use for setting the machine 
+        /// Specifies the name of the domain controller to use for setting the machine
         /// account password.
         /// </summary>
         [Parameter]
@@ -5985,8 +5987,6 @@ $result
                 }
                 catch (Exception exception)
                 {
-                    CommandProcessorBase.CheckForSevereException(exception);
-
                     string errMsg = StringUtil.Format(ComputerResources.CannotResolveComputerName, Server, exception.Message);
                     ErrorRecord error = new ErrorRecord(new InvalidOperationException(errMsg), "AddressResolutionException", ErrorCategory.InvalidArgument, Server);
                     ThrowTerminatingError(error);
@@ -6469,7 +6469,7 @@ $result
         {
             string localUserName = null;
 
-            // The format of local admin username should be "ComputerName\AdminName" 
+            // The format of local admin username should be "ComputerName\AdminName"
             if (psLocalCredential.UserName.Contains("\\"))
             {
                 localUserName = psLocalCredential.UserName;
@@ -6540,7 +6540,7 @@ $result
 
         /// <summary>
         /// Gets the Scope
-        /// 
+        ///
         /// </summary>
         /// <param name="computer"></param>
         /// <param name="namespaceParameter"></param>
@@ -6849,7 +6849,6 @@ $result
             }
             catch (Exception ex)
             {
-                CommandProcessorBase.CheckForSevereException(ex);
                 string errMsg = StringUtil.Format(formatErrorMessage, computerName, ex.Message);
                 ErrorRecord error = new ErrorRecord(new InvalidOperationException(errMsg), ErrorFQEID,
                                                     ErrorCategory.OperationStopped, computerName);
@@ -6896,9 +6895,8 @@ $result
                     IPAddress unused;
                     isIPAddress = IPAddress.TryParse(nameToCheck, out unused);
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
-                    CommandProcessorBase.CheckForSevereException(e);
                 }
 
                 try
@@ -6917,8 +6915,6 @@ $result
                 }
                 catch (Exception e)
                 {
-                    CommandProcessorBase.CheckForSevereException(e);
-
                     // If GetHostEntry() throw exception, then the target should not be the local machine
                     if (!isIPAddress)
                     {

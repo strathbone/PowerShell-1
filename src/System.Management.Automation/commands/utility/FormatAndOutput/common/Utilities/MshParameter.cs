@@ -10,11 +10,6 @@ using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics.CodeAnalysis;
 
-#if CORECLR 
-// Used for 'IsAssignableFrom' which is not available under 'Type' in CoreClR but provided 
-// as an extension method in 'System.Reflection.TypeExtensions'
-using System.Reflection;
-#endif
 
 namespace Microsoft.PowerShell.Commands.Internal.Format
 {
@@ -120,7 +115,7 @@ namespace Microsoft.PowerShell.Commands.Internal.Format
     }
 
     /// <summary>
-    /// metadata abstract base class to contain hash entries definitions 
+    /// metadata abstract base class to contain hash entries definitions
     /// </summary>
     internal abstract class CommandParameterDefinition
     {

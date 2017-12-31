@@ -1,7 +1,4 @@
-﻿Import-Module $PSScriptRoot\..\..\Common\Test.Helpers.psm1
-Import-Module $PSScriptRoot\..\..\Common\TestHostCS.psm1
-
-Describe "Tests for parameter binding" -Tags "CI" {    
+﻿Describe "Tests for parameter binding" -Tags "CI" {
     Context 'Test of Mandatory parameters' {
         BeforeAll {
             $f = "function get-foo { param([Parameter(mandatory=`$true)] `$a) `$a };"
@@ -13,12 +10,12 @@ Describe "Tests for parameter binding" -Tags "CI" {
             $ps = [System.Management.Automation.PowerShell]::Create()
             $ps.Runspace = $rs
 
-            try 
-            {        
+            try
+            {
                 [void] $ps.AddScript($f + "get-foo")
                 $asyncResult = $ps.BeginInvoke()
                 $ps.EndInvoke($asyncResult)
-            
+
                 $ps.Streams.Error.Count | Should Be 1 # the host does not implement it.
                 $ps.InvocationStateInfo.State | Should Be 'Completed'
             } finally {
@@ -33,7 +30,7 @@ Describe "Tests for parameter binding" -Tags "CI" {
             $rs.open()
             $ps = [System.Management.Automation.PowerShell]::Create()
             $ps.Runspace = $rs
-            
+
             try
             {
                 $ps.AddScript($f + "get-foo").invoke()
@@ -41,7 +38,7 @@ Describe "Tests for parameter binding" -Tags "CI" {
                 $prompt | should Not BeNullOrEmpty
                 $result = $prompt.split(":")
                 $result[0] | Should Match 'get-foo'
-                $result[-1] | should be 'a'                
+                $result[-1] | should be 'a'
             } finally {
                 $rs.Close()
                 $rs.Dispose()
@@ -50,7 +47,7 @@ Describe "Tests for parameter binding" -Tags "CI" {
         }
     }
 
-    It 'Test of positional parameters' {        
+    It 'Test of positional parameters' {
         function get-foo
         {
             [CmdletBinding()]
@@ -62,7 +59,7 @@ Describe "Tests for parameter binding" -Tags "CI" {
         get-foo -a b | Should Be b
     }
 
-    It 'Positional parameters when only one position specified: position = 1' {        
+    It 'Positional parameters when only one position specified: position = 1' {
         function get-foo
         {
             param([Parameter(position=1)] $a )
@@ -70,9 +67,9 @@ Describe "Tests for parameter binding" -Tags "CI" {
         }
 
         get-foo b | Should Be b
-    }    
+    }
 
-    It 'Positional parameters when only position specified: position = 2' {       
+    It 'Positional parameters when only position specified: position = 2' {
         function get-foo
         {
             param([Parameter(position=2)] $a )
@@ -82,7 +79,7 @@ Describe "Tests for parameter binding" -Tags "CI" {
         get-foo b | Should Be b
     }
 
-    It 'Multiple positional parameters case 1' {       
+    It 'Multiple positional parameters case 1' {
         function get-foo
         {
             param( [Parameter(position=1)] $a,
@@ -92,9 +89,9 @@ Describe "Tests for parameter binding" -Tags "CI" {
 
         ( get-foo c d ) -join ',' | Should Be 'c,d'
         ( get-foo -a c d ) -join ',' | Should Be 'c,d'
-        ( get-foo -a c -b d ) -join ',' | Should Be 'c,d'        
-        ( get-foo -b d c ) -join ',' | Should Be 'c,d'        
-        ( get-foo c -b d ) -join ',' | Should Be 'c,d'        
+        ( get-foo -a c -b d ) -join ',' | Should Be 'c,d'
+        ( get-foo -b d c ) -join ',' | Should Be 'c,d'
+        ( get-foo c -b d ) -join ',' | Should Be 'c,d'
     }
 
     It 'Multiple positional parameters case 2:  the parameters are put in different order?' {
@@ -106,7 +103,7 @@ Describe "Tests for parameter binding" -Tags "CI" {
             $a; $b
         }
 
-        (get-foo c d) -join ',' | Should Be 'd,c'        
+        (get-foo c d) -join ',' | Should Be 'd,c'
     }
 
     It 'Value from pipeline' {
@@ -153,7 +150,7 @@ Describe "Tests for parameter binding" -Tags "CI" {
         }
 
         ( get-foo a b c d ) -join ',' | Should Be 'b,c,d'
-        ( get-foo a b -a c d ) -join ',' | Should Be 'a,b,d'        
+        ( get-foo a b -a c d ) -join ',' | Should Be 'a,b,d'
         ( get-foo a b -a c -q d ) -join ',' | Should Be 'a,b,-q,d'
     }
 
@@ -164,7 +161,7 @@ Describe "Tests for parameter binding" -Tags "CI" {
                    [Parameter(parametersetname='set2',position=1)] $b,
                    [parameter(valuefromremainingarguments=$true)] $foo )
             $foo
-        }       
+        }
 
         { get-foo -a a -b b c d } | ShouldBeErrorId 'AmbiguousParameterSet,get-foo'
         ( get-foo -a a b c d ) -join ',' | Should Be 'b,c,d'
@@ -211,7 +208,7 @@ Describe "Tests for parameter binding" -Tags "CI" {
             $a
         }
 
-        get-foo -foo b | Should Be 'b'        
+        get-foo -foo b | Should Be 'b'
     }
 
     It 'Invoking with script block' {
@@ -221,7 +218,7 @@ Describe "Tests for parameter binding" -Tags "CI" {
 
     It 'Normal functions' {
         function foo ($a, $b) {$b, $a}
-        ( foo a b ) -join ',' | Should Be 'b,a'       
+        ( foo a b ) -join ',' | Should Be 'b,a'
     }
 
     It 'Null is not Allowed when AllowNull attribute is not set' {
@@ -229,12 +226,12 @@ Describe "Tests for parameter binding" -Tags "CI" {
         {
             param( [Parameter(mandatory=$true)] $a )
             $a
-        }       
+        }
 
         { get-foo -a $null } | ShouldBeErrorId 'ParameterArgumentValidationErrorNullNotAllowed,get-foo'
-        
+
     }
-    
+
     It 'Null is allowed when Allownull attribute is set' {
         function get-foo
         {
@@ -246,7 +243,7 @@ Describe "Tests for parameter binding" -Tags "CI" {
 
     }
 
-    It 'Empty string is not allowed AllowEmptyString Attribute is not set' {       
+    It 'Empty string is not allowed AllowEmptyString Attribute is not set' {
         function get-foo
         {
             param( [Parameter(mandatory=$true)][string] $a )
@@ -300,8 +297,8 @@ Describe "Tests for parameter binding" -Tags "CI" {
     It 'Parameter binding failure on Parameter1 should not cause parameter binding failure on Length' {
         function get-foo
         {
-          param( [Parameter(ValueFromPipeline = $true)] [int] $Parameter1 = 10,        
-                 [Parameter(ValueFromPipelineByPropertyName = $true)] [int] $Length = 100 )  
+          param( [Parameter(ValueFromPipeline = $true)] [int] $Parameter1 = 10,
+                 [Parameter(ValueFromPipelineByPropertyName = $true)] [int] $Length = 100 )
           process  { $Length }
         }
 
@@ -324,8 +321,8 @@ Describe "Tests for parameter binding" -Tags "CI" {
         {
            param ([bool[]] $Parameter)
            $Parameter
-        }        
-        
+        }
+
         $x = get-foo 'a','b'
         $x[0] | Should be $true
         $x[1] | Should be $true
@@ -335,7 +332,7 @@ Describe "Tests for parameter binding" -Tags "CI" {
         It 'Parameter default value is converted correctly to the proper type when nothing is set on parameter' {
             function get-fooa
             {
-                param( [System.Reflection.MemberTypes] $memberTypes = $([Enum]::GetNames("System.Reflection.MemberTypes") -join ",") )    
+                param( [System.Reflection.MemberTypes] $memberTypes = $([Enum]::GetNames("System.Reflection.MemberTypes") -join ",") )
                 $memberTypes | Should BeOfType System.Reflection.MemberTypes
             }
 
@@ -346,7 +343,7 @@ Describe "Tests for parameter binding" -Tags "CI" {
             function get-foob
             {
                 [CmdletBinding()]
-                param( [System.Reflection.MemberTypes] $memberTypes = $([Enum]::GetNames("System.Reflection.MemberTypes") -join ",") )    
+                param( [System.Reflection.MemberTypes] $memberTypes = $([Enum]::GetNames("System.Reflection.MemberTypes") -join ",") )
                 $memberTypes | Should BeOfType System.Reflection.MemberTypes
             }
 
@@ -356,18 +353,18 @@ Describe "Tests for parameter binding" -Tags "CI" {
         It "No default value specified should not cause error when parameter attribute is set on the parameter" {
             function get-fooc
             {
-                param( [Parameter()] [System.Reflection.MemberTypes] $memberTypes )    
+                param( [Parameter()] [System.Reflection.MemberTypes] $memberTypes )
                 $memberTypes | Should Be $null
             }
 
             get-fooc
         }
-        
+
 
         It "No default value specified should not cause error when nothing is set on parameter" {
             function get-food
             {
-                param( [System.Reflection.MemberTypes] $memberTypes )    
+                param( [System.Reflection.MemberTypes] $memberTypes )
                 $memberTypes | Should Be $null
             }
 
@@ -393,7 +390,7 @@ Describe "Tests for parameter binding" -Tags "CI" {
             }
 
             get-foof| Should Be 55
-        }       
+        }
 
         It "Validation attributes should not run on default values" {
             function get-foog
@@ -414,7 +411,63 @@ Describe "Tests for parameter binding" -Tags "CI" {
             }
 
             { get-fooh } | Should not throw
-        }        
+        }
+
+        It "ValidateScript can use custom ErrorMessage" {
+            function get-fooi {
+                [CmdletBinding()]
+                param([ValidateScript({$_ -gt 2}, ErrorMessage = "Item '{0}' failed '{1}' validation")] $p)
+                $p
+            }
+            $errMsg = ''
+            try
+            {
+                get-fooi -p 2
+            }
+            catch
+            {
+                $errMsg = $_.Exception.Message
+            }
+            $errMsg | Should Be "Cannot validate argument on parameter 'p'. Item '2' failed '`$_ -gt 2' validation"
+        }
+
+        It "ValidatePattern can use custom ErrorMessage" {
+            function get-fooj
+            {
+                [CmdletBinding()]
+                param([ValidatePattern("\s+", ErrorMessage = "Item '{0}' failed '{1}' regex")] $p)
+                $p
+            }
+            $errMsg = ''
+            try
+            {
+                get-fooj -p 2
+            }
+            catch
+            {
+                $errMsg = $_.Exception.Message
+            }
+            $errMsg | Should Be "Cannot validate argument on parameter 'p'. Item '2' failed '\s+' regex"
+        }
+
+        It "ValidateSet can use custom ErrorMessage" {
+            function get-fook
+            {
+                param([ValidateSet('A', 'B', 'C', IgnoreCase=$false, ErrorMessage="Item '{0}' is not in '{1}'")] $p)
+            }
+            $errMsg = ''
+            try
+            {
+                get-fook -p 2
+            }
+            catch
+            {
+                $errMsg = $_.Exception.Message
+            }
+            $set = 'A','B','C' -join [Globalization.CultureInfo]::CurrentUICulture.TextInfo.ListSeparator
+            $errMsg | Should Be "Cannot validate argument on parameter 'p'. Item '2' is not in '$set'"
+        }
+
     }
 
     #known issue 2069
@@ -453,11 +506,11 @@ Describe "Tests for parameter binding" -Tags "CI" {
                         }
                     }
                 }
-'@ | % {$_.assembly} | Import-module
+'@ | ForEach-Object {$_.assembly} | Import-module
             }
 
         Get-TestCmdlet -MyParameter @{ a = 42 } | Should Be 'hashtable'
-    }     
+    }
 
     It 'Parameter pasing is consuming enumerators' {
         $a = 1..4
@@ -467,6 +520,6 @@ Describe "Tests for parameter binding" -Tags "CI" {
         & { } $b
 
         #The position of the enumerator shouldn't be modified
-        $b.current |Should Be 1 
+        $b.current |Should Be 1
     }
 }

@@ -65,7 +65,7 @@ namespace System.Management.Automation.Runspaces
                         .AddScriptBlockExpressionBinding(
 @"$optional = $_.required -ne 'true'
 $positional = (($_.position -ne $()) -and ($_.position -ne '') -and ($_.position -notmatch 'named') -and ([int]$_.position -ne $()))
-$parameterValue = if ($null -ne $_.psobject.Members['ParameterValueGroup']) { 
+$parameterValue = if ($null -ne $_.psobject.Members['ParameterValueGroup']) {
     "" {$($_.ParameterValueGroup.ParameterValue -join ' | ')}""
 } elseif ($null -ne $_.psobject.Members['ParameterValue']) {
     "" <$($_.ParameterValue)>""
@@ -541,7 +541,7 @@ if (($_.relatedLinks -ne $()) -and ($_.relatedLinks.navigationLink -ne $()) -and
                     .StartRowDefinition()
                         .AddPropertyColumn("Name")
                         .AddPropertyColumn("Category")
-                        .AddScriptBlockColumn("if ($_.ModuleName -ne $null) { $_.ModuleName } else {$_.PSSnapIn}")
+                        .AddScriptBlockColumn("if ($null -ne $_.ModuleName) { $_.ModuleName } else {$_.PSSnapIn}")
                         .AddPropertyColumn("Synopsis")
                     .EndRowDefinition()
                 .EndTable());
@@ -764,15 +764,15 @@ if (($_.relatedLinks -ne $()) -and ($_.relatedLinks.navigationLink -ne $()) -and
                             .AddNewline()
                         .EndFrame()
                         .AddPropertyExpressionBinding(@"terminatingErrors", selectedByScript: @"
-                      (($_.terminatingErrors -ne $null) -and
-                      ($_.terminatingErrors.terminatingError -ne $null))
+                      (($null -ne $_.terminatingErrors) -and
+                      ($null -ne $_.terminatingErrors.terminatingError))
                     ", customControl: control13)
                         .AddPropertyExpressionBinding(@"nonTerminatingErrors", selectedByScript: @"
-                      (($_.nonTerminatingErrors -ne $null) -and
-                      ($_.nonTerminatingErrors.nonTerminatingError -ne $null))
+                      (($null -ne $_.nonTerminatingErrors) -and
+                      ($null -ne $_.nonTerminatingErrors.nonTerminatingError))
                     ", customControl: control14)
-                        .AddPropertyExpressionBinding(@"alertSet", selectedByScript: "$_.alertSet -ne $null", customControl: control15)
-                        .AddPropertyExpressionBinding(@"alertSet", enumerateCollection: true, selectedByScript: "$_.alertSet -ne $null", customControl: control16)
+                        .AddPropertyExpressionBinding(@"alertSet", selectedByScript: "$null -ne $_.alertSet", customControl: control15)
+                        .AddPropertyExpressionBinding(@"alertSet", enumerateCollection: true, selectedByScript: "$null -ne $_.alertSet", customControl: control16)
                         .StartFrame(leftIndent: 4)
                             .AddPropertyExpressionBinding(@"Examples", customControl: sharedControls[7])
                             .AddNewline()
